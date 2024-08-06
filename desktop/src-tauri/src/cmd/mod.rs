@@ -17,6 +17,7 @@ use tauri::{Emitter, Listener, State, Wry};
 use tauri_plugin_store::{with_store, StoreCollection};
 use tokio::sync::Mutex;
 use vibe_core::downloader;
+use vibe_core::transcript::Segment;
 use vibe_core::{transcribe::SegmentCallbackData, transcript::Transcript};
 pub mod audio;
 
@@ -156,13 +157,13 @@ pub async fn transcribe(
     let ctx = model_context.as_ref().context("as ref")?;
     let app_handle_c = app_handle.clone();
 
-    let new_segment_callback = move |data: SegmentCallbackData| {
+    let new_segment_callback = move |data: Segment| {
         app_handle_c
             .clone()
             .emit_to(
                 "main",
                 "new_segment",
-                serde_json::json!({"start": data.start_timestamp, "stop": data.end_timestamp, "text": data.text}),
+                serde_json::json!({"start": data.start, "stop": data.stop, "text": data.text, "speaker": data.speaker}),
             )
             .map_err(|e| eyre!("{:?}", e))
             .log_error();

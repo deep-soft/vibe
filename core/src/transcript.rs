@@ -31,7 +31,7 @@ pub struct Transcript {
     pub segments: Vec<Segment>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
 pub struct Segment {
     pub start: i64,
     pub stop: i64,
