@@ -2608,9 +2608,9 @@ dependencies = [
 
 [[package]]
 name = "knf-rs"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e535063f2ab45fd9fb5116d5d77fde3e667947c8eebf1b52248edc8cd996d074"
+checksum = "b7c5671db15539c4004e481821bd530edb4cefa8deb58d27a334a24e84d16a3d"
 dependencies = [
  "eyre 0.6.12",
  "knf-rs-sys",
@@ -2619,9 +2619,9 @@ dependencies = [
 
 [[package]]
 name = "knf-rs-sys"
-version = "0.2.1"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "791cc8085699d508e0980f1213551d4402d66c5f534395ffa712afe89e4d5e54"
+checksum = "6a77e63ff057128e3ea77cafe97b1cf499efd4d54feeb0caaebadc3b4842a892"
 dependencies = [
  "bindgen",
  "cmake",
@@ -3464,7 +3464,6 @@ checksum = "86d83095ae3c1258738d70ae7a06195c94d966a8e546f0d3609dc90885fb61f5"
 dependencies = [
  "half",
  "js-sys",
- "libloading 0.8.5",
  "ndarray",
  "ort-sys",
  "thiserror",
@@ -3895,9 +3894,9 @@ dependencies = [
 
 [[package]]
 name = "pyannote-rs"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc713341b803ea8c0f4979bba9a15dfcc45114dcb80ba5c5a2630423367feda6"
+checksum = "30b1403f55bb8fda3a168dcef793eef44f68a232b3bed916a5449b5d83388682"
 dependencies = [
  "eyre 0.6.12",
  "hound",
@@ -6622,7 +6621,7 @@ dependencies = [
 [[package]]
 name = "whisper-rs"
 version = "0.12.1"
-source = "git+https://github.com/thewh1teagle/whisper-rs.git?branch=v1.6.2#2a0d48845980521b36cccbb5abbf820448e0a52e"
+source = "git+https://github.com/thewh1teagle/whisper-rs.git?branch=v1.6.2#3e1bc2cb88648be50bfaf0f50859a6d35d06571d"
 dependencies = [
  "tracing",
  "whisper-rs-sys",
@@ -6631,7 +6630,7 @@ dependencies = [
 [[package]]
 name = "whisper-rs-sys"
 version = "0.10.1"
-source = "git+https://github.com/thewh1teagle/whisper-rs.git?branch=v1.6.2#2a0d48845980521b36cccbb5abbf820448e0a52e"
+source = "git+https://github.com/thewh1teagle/whisper-rs.git?branch=v1.6.2#3e1bc2cb88648be50bfaf0f50859a6d35d06571d"
 dependencies = [
  "bindgen",
  "cfg-if",
