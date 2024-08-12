@@ -305,8 +305,8 @@ if (process.env.GITHUB_ENV) {
 		}
 		if (hasFeature('cuda')) {
 			// ort crate link msvc statically by default. will be fixed in 2.0.0-rc.5
-			fs.appendFile(process.env.GITHUB_ENV, `WHISPER_USE_STATIC_MSVC=0\n`)
-			fs.appendFile(process.env.GITHUB_ENV, `KNF_STATIC_CRT=0\n`)
+			fs.appendFile(process.env.GITHUB_ENV, `WHISPER_USE_STATIC_MSVC=1\n`)
+			fs.appendFile(process.env.GITHUB_ENV, `KNF_STATIC_CRT=1\n`)
 		} else {
 			fs.appendFile(process.env.GITHUB_ENV, `WHISPER_USE_STATIC_MSVC=1\n`)
 			fs.appendFile(process.env.GITHUB_ENV, `KNF_STATIC_CRT=1\n`)
