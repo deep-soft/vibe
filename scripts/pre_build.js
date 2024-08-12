@@ -238,8 +238,8 @@ if (!process.env.GITHUB_ENV) {
 		}
 		if (hasFeature('cuda')) {
 			console.log(`$env:CUDA_PATH = "${cudaPath}"`)
-			console.log(`$env:KNF_STATIC_CRT = "0"`)
-			console.log('$env:WHISPER_USE_STATIC_MSVC= "0"')
+			console.log(`$env:KNF_STATIC_CRT = "1"`)
+			console.log('$env:WHISPER_USE_STATIC_MSVC= "1"')
 		}
 		if (hasFeature('opencl')) {
 			console.log(`$env:CLBlast_DIR = "${exports.clblast}"`)
