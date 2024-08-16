@@ -1,6 +1,6 @@
 # 2024-08-16 09:50
 # act-release.yml
-name: Release
+name: act-release
 
 on:
 #    push:
