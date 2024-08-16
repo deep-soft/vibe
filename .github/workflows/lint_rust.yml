@@ -4,12 +4,12 @@ on:
     # push:
     #   branches:
     #     - main
-    pull_request:
-        paths:
-            - '.github/workflows/lint.yml'
-            - 'desktop/src-tauri/**'
-            - 'cli/src/**'
-            - 'core/src/**'
+#    pull_request:
+#        paths:
+#            - '.github/workflows/lint.yml'
+#            - 'desktop/src-tauri/**'
+#            - 'cli/src/**'
+#            - 'core/src/**'
     workflow_dispatch:
 
 env:
