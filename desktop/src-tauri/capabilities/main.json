@@ -40,6 +40,31 @@
         }
       ]
     },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "yt-dlp_macos",
+          "cmd": "$APPLOCALDATA/yt-dlp_macos",
+          "args": [
+            {
+              "validator": "\\S+"
+            }
+          ],
+          "sidecar": false
+        }
+      ]
+    },
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://*.anthropic.*"
+        }
+      ]
+    },
+    "http:default",
+    "http:allow-fetch",
     "store:allow-set",
     "store:allow-get",
     "store:allow-has",
@@ -47,11 +72,12 @@
     "store:allow-clear",
     "store:allow-save",
     "store:allow-load",
-    "path:default",
-    "event:default",
-    "resources:default",
-    "menu:default",
-    "tray:default",
+    "store:allow-create-store",
+    "core:path:default",
+    "core:event:default",
+    "core:resources:default",
+    "core:menu:default",
+    "core:tray:default",
     "fs:allow-remove",
     "fs:allow-read-dir",
     "fs:allow-read-text-file",
@@ -61,30 +87,34 @@
     "os:allow-version",
     "os:allow-os-type",
     "os:allow-locale",
-    "window:default",
-    "window:allow-unminimize",
-    "window:allow-set-focus",
-    "window:allow-close",
-    "window:allow-destroy",
-    "window:allow-show",
-    "window:allow-is-visible",
+    "core:window:default",
+    "core:window:allow-unminimize",
+    "core:window:allow-set-focus",
+    "core:window:allow-close",
+    "core:window:allow-destroy",
+    "core:window:allow-show",
+    "core:window:allow-is-visible",
     "window-state:allow-restore-state",
     "window-state:allow-save-window-state",
-    "webview:default",
-    "webview:allow-print",
+    "core:webview:default",
+    "core:webview:allow-print",
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-ask",
     "dialog:allow-message",
     "process:allow-restart",
-    "app:default",
-    "app:allow-version",
-    "app:allow-name",
+    "core:app:default",
+    "core:app:allow-version",
+    "core:app:allow-name",
     "updater:default",
     "shell:allow-open",
+    "shell:allow-execute",
+    "shell:allow-kill",
+    "shell:allow-spawn",
     "fs:default",
     "fs:allow-exists",
+    "core:path:allow-basename",
     "deep-link:allow-get-current",
     "clipboard-manager:allow-write-text"
   ]

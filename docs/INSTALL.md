@@ -17,26 +17,30 @@ Currently, `MacOS` computers get the best performance since there's GPU optimiza
 
 Nvidia's performance is incredible — transcribe 1 hour in just 1-5 minutes!
 
-Look for installers with `nvidia` in [vibe/releases/latest](https://github.com/thewh1teagle/vibe/releases/latest)
+~Look for installers with `nvidia` in [vibe/releases/latest](https://github.com/thewh1teagle/vibe/releases/latest)~
 
-On Linux, you may also need to install [`cuda-toolkit`](https://developer.nvidia.com/cuda-downloads).
+~On Linux, you may also need to install [`cuda-toolkit`](https://developer.nvidia.com/cuda-downloads).~
+
+Just install the regular installer.
 
 </details>
 
 <details>
 <summary>AMD 🚀</summary>
-Only available under Linux!
+~Only available under Linux!~
 
-Look for installers with `amd` in [vibe/releases/latest](https://github.com/thewh1teagle/vibe/releases/latest)
+~Look for installers with `amd` in [vibe/releases/latest](https://github.com/thewh1teagle/vibe/releases/latest)~
 
-[`rocm toolkit`](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/) is strictly required at runtime.
+~[`rocm toolkit`](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/) is strictly required at runtime.~
+
+Just install the regular installer.
 
 </details>
 
 <details>
 <summary>Speedup GPU in Windows 🚀</summary>
 
-Sometimes Windows doesn't use the GPU although nvidia / opencl is supported.
+Sometimes Windows doesn't use the GPU although nvidia / vulkan is supported.
 There's a potential fix in windows settings.
 
 1. Hit `Win` + `R`
@@ -91,7 +95,9 @@ export WEBKIT_DISABLE_COMPOSITING_MODE=1
 
 `Windows`: install `.exe` file from [releases](https://github.com/thewh1teagle/vibe/releases)
 
-`Linux`: install `.deb` from [releases](https://github.com/thewh1teagle/vibe/releases) (`Arch` users can use [debtap](https://aur.archlinux.org/packages/debtap)
+`Linux`: install `.deb` from [releases](https://github.com/thewh1teagle/vibe/releases) (`Arch` users can use [debtap](https://aur.archlinux.org/packages/debtap))
+
+_All models available for manual install. see [Pre built models](https://github.com/thewh1teagle/vibe/releases/tag/v0.0.1)_
 
 </details>
 
@@ -99,6 +105,8 @@ export WEBKIT_DISABLE_COMPOSITING_MODE=1
 <summary>Offline Setup 💾</summary>
 
 Offline installation with Vibe is easy: open the app, cancel the download, and navigate to the `Customize` section within settings.
+
+_All models available for manual install. see settings or [Pre built models](https://github.com/thewh1teagle/vibe/releases/tag/v0.0.1)_
 
 </details>
 
@@ -137,5 +145,22 @@ vibe://download/?url=https://huggingface.co/ggerganov/whisper.cpp/resolve/main/g
 	<summary>Install on Windows 7</summary>
 
 **There's no support for Windows 7**
+
+</details>
+
+<details>
+<summary>Usage on linux server</summary>
+
+To use Vibe on linux server you need to install fake display
+
+```console
+sudo apt-get install xvfb -y
+Xvfb :1 -screen 0 1024x768x24 &
+export DISPLAY=1
+
+wget https://github.com/thewh1teagle/vibe/releases/download/v0.0.1/ggml-medium.bin
+wget https://github.com/thewh1teagle/vibe/raw/main/samples/single.wav
+vibe --model ggml-medium.bin --file single.wav
+```
 
 </details>

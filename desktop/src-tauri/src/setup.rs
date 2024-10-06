@@ -1,5 +1,5 @@
 use crate::{
-    cli,
+    cli::{self, is_cli_detected},
     config::STORE_FILENAME,
     panic_hook,
     utils::{get_issue_url, LogError},
@@ -8,7 +8,7 @@ use eyre::eyre;
 use once_cell::sync::Lazy;
 use std::fs;
 use tauri::{App, Manager};
-use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_store::StoreBuilder;
 use tokio::sync::Mutex;
@@ -32,7 +32,7 @@ pub fn setup(app: &App) -> Result<(), Box<dyn std::error::Error>> {
     // Manage model context
     app.manage(Mutex::new(None::<ModelContext>));
 
-    let mut store = StoreBuilder::new(STORE_FILENAME).build(app.handle().clone());
+    let store = StoreBuilder::new(&app.handle().clone(), STORE_FILENAME).build();
     let _ = store.load();
 
     // Setup logging to terminal
@@ -68,7 +68,7 @@ pub fn setup(app: &App) -> Result<(), Box<dyn std::error::Error>> {
                     .message("App crashed with error. Please register to Github and then click report.")
                     .kind(tauri_plugin_dialog::MessageDialogKind::Error)
                     .title("Vibe Crashed")
-                    .ok_button_label("Report")
+                    .buttons(MessageDialogButtons::OkCustom("Report".into()))
                     .show(|_| {});
                 let _ = app_handle.shell().open(get_issue_url(format!("{:?}", info)), None);
             }
@@ -101,15 +101,19 @@ pub fn setup(app: &App) -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(not(all(any(target_arch = "x86", target_arch = "x86_64"), target_os = "windows")))]
     tracing::debug!("CPU feature detection is not supported on this architecture.");
+    tracing::debug!("Executable Architecture: {}", std::env::consts::ARCH);
 
-    tracing::debug!("COMMIT_HASH: {}", env!("COMMIT_HASH"));
+    tracing::debug!("APP VERSION: {}", app.package_info().version.to_string());
+    tracing::debug!("COMMIT HASH: {}", env!("COMMIT_HASH"));
 
     let app_handle = app.app_handle().clone();
-    if cli::is_cli_detected() {
+    if is_cli_detected() {
+        tracing::debug!("CLI mode");
         tauri::async_runtime::spawn(async move {
             cli::run(&app_handle).await.map_err(|e| eyre!("{:?}", e)).log_error();
         });
     } else {
+        tracing::debug!("Non CLI mode");
         // Create main window
         let result = tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("index.html".into()))
             .inner_size(800.0, 700.0)

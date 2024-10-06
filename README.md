@@ -39,22 +39,22 @@
 -   🔒 Ultimate privacy: fully offline transcription, no data ever leaves your device
 -   🎨 User friendly design
 -   🎙️ Transcribe audio / video
+-   🎶 Option to transcribe audio from popular websites (YouTube, Vimeo, Facebook, Twitter and more!)
 -   📂 Batch transcribe multiple files!
 -   📝 Support `SRT`, `VTT`, `TXT`, `HTML`, `PDF`, `JSON` formats
 -   👀 Realtime preview
+-   ✨ Summarize transcripts: Get concise summaries of transcripts via Claude API integration
 -   🌐 Translate to English from any language
 -   🖨️ Print transcript directly to any printer
 -   🔄 Automatic updates
--   🖥️ Optimized for `CPU` on (`Windows` / `Linux`)
--   💻 Optimized for `GPU` (`macOS`, `Windows`)
--   🎮 Optimized for `Nvidia` GPUs! (see [INSTALL.md#nvidia](INSTALL.md#nvidia))
--   🎮 Optimized for `AMD` GPUs (linux only)! (see [INSTALL.md#amd](INSTALL.md#amd))
+-   💻 Optimized for `GPU` (`macOS`, `Windows`, `Linux`)
+-   🎮 Optimized for `Nvidia` / `AMD` / `Intel` GPUs! (`Vulkan`/`CoreML`)
 -   🔧 Total Freedom: Customize Models Easily via Settings
 -   ⚙️ Model arguments for advanced users
 -   ⏳ Transcribe system audio
 -   🎤 Transcribe from microphone
 -   🖥️ CLI support: Use Vibe directly from the command line interface! (see `--help`)
--   👥 Speaker diarization (Beta)
+-   👥 Speaker diarization
 -   📱 ~iOS & Android support~ (coming soon)
 -   📥 Integrate custom models from your own site: Use `vibe://download/?url=<model url>`
 -   📹 Choose caption length optimized for videos / reels
@@ -68,7 +68,7 @@
 
 # Install notes
 
-See [Install.md](INSTALL.md)
+See [Install.md](docs/INSTALL.md)
 
 # Contribute 🤝
 
@@ -99,7 +99,7 @@ In addition you can add translation to [Vibe website](https://thewh1teagle.githu
 
 # Build 🛠️
 
-see [BUILDING.md](BUILDING.md)
+see [BUILDING.md](docs/BUILDING.md)
 
 # I want to know more!
 
@@ -107,7 +107,11 @@ Medium [post](https://medium.com/@thewh1teagle/creating-vibe-multilingual-audio-
 
 # Issue report
 
-You can open [new issue](https://github.com/thewh1teagle/vibe/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=%5BBug%5D%3A+) and it's recommend to check [DEBUG.md](DEBUG.md) first.
+You can open [new issue](https://github.com/thewh1teagle/vibe/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=%5BBug%5D%3A+) and it's recommend to check [DEBUG.md](docs/DEBUG.md) first.
+
+# Privacy Policy 🔒
+
+Your privacy is important to us. Please review our [Privacy Policy](docs/PRIVACY_POLICY.pdf) to understand how we handle your data.
 
 # Credits
 

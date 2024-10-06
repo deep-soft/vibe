@@ -12,6 +12,9 @@ import { writeTextFile } from '@tauri-apps/plugin-fs'
 import { emit, listen } from '@tauri-apps/api/event'
 import { usePreferenceProvider } from '~/providers/Preference'
 import { useFilesContext } from '~/providers/FilesProvider'
+import { basename } from '@tauri-apps/api/path'
+import { askLlm } from '~/lib/llm'
+import * as transcript from '~/lib/transcript'
 
 export function viewModel() {
 	const { files, setFiles } = useFilesContext()
@@ -55,8 +58,9 @@ export function viewModel() {
 		})
 		if (selected) {
 			const newFiles: NamedPath[] = []
-			for (const file of selected) {
-				newFiles.push({ name: file.name ?? '', path: file.path })
+			for (const path of selected) {
+				const name = await basename(path)
+				newFiles.push({ name, path })
 			}
 			setFiles(newFiles)
 
@@ -121,6 +125,18 @@ export function viewModel() {
 				// Calculate time
 				let total = Math.round((performance.now() - startTime) / 1000)
 				console.info(`Transcribe ${file.name} took ${total} seconds.`)
+
+				if (preference.llmOptions.enabled) {
+					try {
+						const question = `${preference.llmOptions.prompt.replace('%s', transcript.asText(res.segments))}`
+						const answer = await askLlm(preference.llmOptions.apiKey!, question, preference.llmOptions.maxTokens)
+						if (answer) {
+							res.segments = [{ start: 0, stop: res.segments?.[res.segments?.length - 1].stop ?? 0, text: answer }]
+						}
+					} catch (e) {
+						console.error(e)
+					}
+				}
 
 				// Write file
 				const dst = await invoke<string>('get_path_dst', { src: file.path, suffix: formatExtensions[format] })

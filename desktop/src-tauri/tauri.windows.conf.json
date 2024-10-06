@@ -1,7 +1,12 @@
 {
-	"bundle": {
-		"resources": {
-			"ffmpeg\\bin\\x64\\*": "./"
-		}
-	}
+    "bundle": {
+        "windows": {
+            "nsis": {
+                "installerHooks": "vc_redist.nsh"
+            }
+        },
+        "resources": {
+            "ffmpeg\\bin\\x64\\*": "./"
+        }
+    }
 }

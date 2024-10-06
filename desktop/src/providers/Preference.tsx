@@ -7,6 +7,8 @@ import * as os from '@tauri-apps/plugin-os'
 import { supportedLanguages } from '~/lib/i18n'
 import WhisperLanguages from '~/assets/whisper-languages.json'
 import { useTranslation } from 'react-i18next'
+import { LlmOptions } from '~/lib/llm'
+import { llmDefaultMaxTokens } from '~/lib/config'
 
 type Direction = 'ltr' | 'rtl'
 
@@ -45,6 +47,11 @@ export interface Preference {
 	diarizeThreshold: number
 	setDiarizeThreshold: ModifyState<number>
 	setLanguageDirections: () => void
+	homeTabIndex: number
+	setHomeTabIndex: ModifyState<number>
+
+	llmOptions: LlmOptions
+	setLlmOptions: ModifyState<LlmOptions>
 }
 
 // Create the context
@@ -97,9 +104,15 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	const [recognizeSpeakers, setRecognizeSpeakers] = useLocalStorage<boolean>('prefs_recognize_speakers', false)
 	const [maxSpeakers, setMaxSpeakers] = useLocalStorage<number>('prefs_max_speakers', 5)
 	const [diarizeThreshold, setDiarizeThreshold] = useLocalStorage<number>('prefs_diarize_threshold', 0.5)
-	const [storeRecordInDocuments, setStoreRecordInDocuments] = useLocalStorage('prefs_store_record_in_documents', false)
+	const [storeRecordInDocuments, setStoreRecordInDocuments] = useLocalStorage('prefs_store_record_in_documents', true)
 	const [theme, setTheme] = useLocalStorage<'dark' | 'light'>('prefs_theme', systemIsDark ? 'dark' : 'light')
 	const [highGraphicsPreference, setHighGraphicsPreference] = useLocalStorage<boolean>('prefs_high_graphics_performance', false)
+	const [homeTabIndex, setHomeTabIndex] = useLocalStorage<number>('prefs_home_tab_index', 1)
+	const [llmOptions, setLlmOptions] = useLocalStorage<LlmOptions>('prefs_llm_options', {
+		enabled: false,
+		prompt: i18n.t('common.llm-default-prompt'),
+		maxTokens: llmDefaultMaxTokens,
+	})
 
 	useEffect(() => {
 		setIsFirstRun(false)
@@ -140,6 +153,8 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	}, [language])
 
 	const preference: Preference = {
+		llmOptions,
+		setLlmOptions,
 		setLanguageDirections: setLanguageDefaults,
 		diarizeThreshold,
 		setDiarizeThreshold,
@@ -171,6 +186,8 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 		setTheme,
 		gpuDevice,
 		setGpuDevice,
+		homeTabIndex,
+		setHomeTabIndex,
 	}
 
 	return <PreferenceContext.Provider value={preference}>{children}</PreferenceContext.Provider>

@@ -14,12 +14,13 @@ use tauri::{
     window::{ProgressBarState, ProgressBarStatus},
     Manager,
 };
-use tauri::{Emitter, Listener, State, Wry};
-use tauri_plugin_store::{with_store, StoreCollection};
+use tauri::{Emitter, Listener, State};
+use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
 use vibe_core::transcript::Segment;
 use vibe_core::transcript::Transcript;
 pub mod audio;
+pub mod ytdlp;
 
 /// Return true if there's internet connection
 /// timeout in ms
@@ -136,11 +137,19 @@ pub async fn download_model(app_handle: tauri::AppHandle, url: Option<String>) -
     } else {
         DEAFULT_MODEL_URL.to_string()
     };
+
     downloader
         .download(&download_url, model_path.to_owned(), download_progress_callback)
         .await?;
     set_progress_bar(&app_handle_c, None)?;
     Ok(model_path.to_str().context("to_str")?.to_string())
+}
+
+#[tauri::command]
+pub fn get_ffmpeg_path() -> String {
+    vibe_core::audio::find_ffmpeg_path()
+        .map(|p| p.to_str().unwrap().to_string())
+        .unwrap_or_default()
 }
 
 #[tauri::command]
@@ -397,8 +406,46 @@ pub async fn load_model(app_handle: tauri::AppHandle, model_path: String, gpu_de
 }
 
 #[tauri::command]
+#[allow(clippy::comparison_to_empty)]
 pub fn is_portable() -> bool {
-    !env!("WINDOWS_PORTABLE").is_empty()
+    env!("WINDOWS_PORTABLE") == "1"
+}
+
+#[tauri::command]
+pub fn check_vulkan() -> Result<()> {
+    #[cfg(all(feature = "vulkan", windows))]
+    {
+        use ash::vk;
+        unsafe {
+            let entry = match ash::Entry::load() {
+                Ok(e) => e,
+                Err(e) => {
+                    tracing::error!("Failed to load Vulkan entry: {:?}", e);
+                    return Err(e.into());
+                }
+            };
+
+            let app_desc = vk::ApplicationInfo::default().api_version(vk::make_api_version(0, 1, 0, 0));
+            let instance_desc = vk::InstanceCreateInfo::default().application_info(&app_desc);
+
+            let instance = match entry.create_instance(&instance_desc, None) {
+                Ok(inst) => inst,
+                Err(e) => {
+                    tracing::error!("Failed to create Vulkan instance: {:?}", e);
+                    return Err(e.into());
+                }
+            };
+
+            instance.destroy_instance(None);
+            tracing::debug!("Vulkan support is successfully checked and working.");
+        }
+        Ok(())
+    }
+    #[cfg(not(all(feature = "vulkan", windows)))]
+    {
+        tracing::debug!("Vulkan check skipped on this platform");
+        Ok(())
+    }
 }
 
 #[tauri::command]
@@ -413,11 +460,10 @@ pub fn get_logs_folder(app_handle: tauri::AppHandle) -> Result<PathBuf> {
 
 #[tauri::command]
 pub fn get_models_folder(app_handle: tauri::AppHandle) -> Result<PathBuf> {
-    let stores = app_handle.state::<StoreCollection<Wry>>();
-    if let Ok(Some(models_folder)) = with_store(app_handle.clone(), stores, STORE_FILENAME, |store| {
-        tracing::debug!("{:?}", store.get("models_folder"));
-        Ok(store.get("models_folder").and_then(|p| p.as_str().map(PathBuf::from)))
-    }) {
+    let store = app_handle.store_builder(STORE_FILENAME).build();
+
+    let models_folder = store.get("models_folder").and_then(|p| p.as_str().map(PathBuf::from));
+    if let Some(models_folder) = models_folder {
         tracing::debug!("models folder: {:?}", models_folder);
         return Ok(models_folder);
     }
@@ -451,8 +497,8 @@ pub fn get_cargo_features() -> Vec<String> {
     if cfg!(feature = "openblas") {
         enabled_features.push("openblas".to_string());
     }
-    if cfg!(feature = "opencl") {
-        enabled_features.push("opencl".to_string());
+    if cfg!(feature = "vulkan") {
+        enabled_features.push("vulkan".to_string());
     }
     if cfg!(feature = "rocm") {
         enabled_features.push("rocm".to_string());

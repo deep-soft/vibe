@@ -33,10 +33,11 @@ use utils::LogError;
 
 fn main() -> Result<()> {
     // Attach console in Windows:
-    #[cfg(windows)]
+    #[cfg(all(windows, not(debug_assertions)))]
     cli::attach_console();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             tracing::debug!("{}, {argv:?}, {cwd}", app.package_info().name);
@@ -80,7 +81,11 @@ fn main() -> Result<()> {
             cmd::audio::start_record,
             cmd::get_models_folder,
             cmd::is_portable,
+            cmd::check_vulkan,
             cmd::get_logs_folder,
+            cmd::get_ffmpeg_path,
+            cmd::ytdlp::download_audio,
+            cmd::ytdlp::get_temp_path,
             #[cfg(windows)]
             cmd::set_high_gpu_preference
         ])

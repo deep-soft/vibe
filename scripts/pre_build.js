@@ -21,6 +21,8 @@ const config = {
 	ffmpegRealname: 'ffmpeg',
 	openblasRealname: 'openblas',
 	clblastRealname: 'clblast',
+	vulkanRuntimeRealName: 'vulkan_runtime',
+	vulkanSdkRealName: 'vulkan_sdk',
 	windows: {
 		ffmpegName: 'ffmpeg-7.0-windows-desktop-vs2022-default',
 		ffmpegUrl: 'https://unlimited.dl.sourceforge.net/project/avbuild/windows-desktop/ffmpeg-7.0-windows-desktop-vs2022-default.7z?viasf=1',
@@ -31,7 +33,11 @@ const config = {
 		clblastName: 'CLBlast-1.6.2-windows-x64',
 		clblastUrl: 'https://github.com/CNugteren/CLBlast/releases/download/1.6.2/CLBlast-1.6.2-windows-x64.zip',
 
-		vcpkgPackages: ['opencl'],
+		vulkanRuntimeName: 'VulkanRT-1.3.290.0-Components',
+		vulkanRuntimeUrl: 'https://sdk.lunarg.com/sdk/download/1.3.290.0/windows/VulkanRT-1.3.290.0-Components.zip',
+		vulkanSdkName: 'VulkanSDK-1.3.290.0-Installer',
+		vulkanSdkUrl: 'https://sdk.lunarg.com/sdk/download/1.3.290.0/windows/VulkanSDK-1.3.290.0-Installer.exe',
+		vcpkgPackages: [],
 	},
 	linux: {
 		aptPackages: [
@@ -58,9 +64,9 @@ const config = {
 		ffmpegUrl: 'https://master.dl.sourceforge.net/project/avbuild/macOS/ffmpeg-6.1-macOS-default.tar.xz?viasf=1',
 	},
 	diarization: {
-		embedModelUrl: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/wespeaker_en_voxceleb_CAM++.onnx',
+		embedModelUrl: 'https://github.com/thewh1teagle/vibe/releases/download/v0.0.1/wespeaker_en_voxceleb_CAM++.onnx',
 		embedModelFilename: 'wespeaker_en_voxceleb_CAM++.onnx',
-		segmentModelUrl: 'https://github.com/pengzhendong/pyannote-onnx/raw/master/pyannote_onnx/segmentation-3.0.onnx',
+		segmentModelUrl: 'https://github.com/thewh1teagle/vibe/releases/download/v0.0.1/segmentation-3.0.onnx',
 		segmentModelFilename: 'segmentation-3.0.onnx',
 	},
 }
@@ -78,8 +84,9 @@ const exports = {
 if (platform == 'linux') {
 	// Install APT packages
 	await $`sudo apt-get update`
-	if (hasFeature('opencl')) {
-		config.linux.aptPackages.push('libclblast-dev')
+	if (hasFeature('vulkan')) {
+		config.linux.aptPackages.push('libvulkan1')
+		config.linux.aptPackages.push('mesa-vulkan-drivers')
 	}
 	for (const name of config.linux.aptPackages) {
 		await $`sudo apt-get install -y ${name}`
@@ -117,8 +124,24 @@ if (platform == 'windows') {
 		await $`rm ${config.windows.clblastName}.7z`
 	}
 
+	// Setup Vulkan
+	if (!(await fs.exists(config.vulkanSdkRealName)) && hasFeature('vulkan')) {
+		await $`C:\\msys64\\usr\\bin\\wget.exe -nc --show-progress ${config.windows.vulkanSdkUrl} -O ${config.windows.vulkanSdkName}.exe`
+		let executable = path.join(cwd, `${config.windows.vulkanSdkName}.exe`)
+		let vulkanSdkRoot = path.join(cwd, config.vulkanSdkRealName)
+		await $`${executable} --root ${vulkanSdkRoot} --accept-licenses --default-answer --confirm-command install`
+
+		await $`C:\\msys64\\usr\\bin\\wget.exe -nc --show-progress ${config.windows.vulkanRuntimeUrl} -O ${config.windows.vulkanRuntimeName}.zip`
+		await $`"C:\\Program Files\\7-Zip\\7z.exe" x ${config.windows.vulkanRuntimeName}.zip` // 7z file inside
+		await $`mv ${config.windows.vulkanRuntimeName} ${config.vulkanRuntimeRealName}`
+		await $`rm ${config.windows.vulkanSdkName}.exe`
+		await $`rm ${config.windows.vulkanRuntimeName}.zip`
+	}
+
 	// Setup vcpkg packages
-	await $`C:\\vcpkg\\vcpkg.exe install ${config.windows.vcpkgPackages}`.quiet()
+	if (config.windows.vcpkgPackages.length > 0) {
+		await $`C:\\vcpkg\\vcpkg.exe install ${config.windows.vcpkgPackages}`.quiet()
+	}
 }
 
 /* ########## macOS ########## */
@@ -169,16 +192,6 @@ if (hasFeature('cuda')) {
 	}
 }
 
-if (hasFeature('opencl')) {
-	if (platform === 'windows') {
-		const tauriConfigContent = await fs.readFile('tauri.windows.conf.json', { encoding: 'utf-8' })
-		const tauriConfig = JSON.parse(tauriConfigContent)
-		tauriConfig.bundle.resources['clblast\\bin\\*.dll'] = './'
-		tauriConfig.bundle.resources['C:\\vcpkg\\packages\\opencl_x64-windows\\bin\\*.dll'] = './'
-		await fs.writeFile('tauri.windows.conf.json', JSON.stringify(tauriConfig, null, 4))
-	}
-}
-
 // OpenBlas
 if (hasFeature('openblas')) {
 	if (platform === 'windows') {
@@ -186,6 +199,26 @@ if (hasFeature('openblas')) {
 		const tauriConfig = JSON.parse(tauriConfigContent)
 		tauriConfig.bundle.resources['openblas\\bin\\*.dll'] = './'
 		await fs.writeFile('tauri.windows.conf.json', JSON.stringify(tauriConfig, null, 4))
+	}
+}
+
+// Vulkan
+let vulkanPath = path.join(cwd, config.vulkanSdkRealName)
+let vulkanRuntimePath = path.join(cwd, config.vulkanRuntimeRealName)
+if (hasFeature('vulkan')) {
+	if (platform === 'windows') {
+		const tauriConfigContent = await fs.readFile('tauri.windows.conf.json', { encoding: 'utf-8' })
+		const tauriConfig = JSON.parse(tauriConfigContent)
+		tauriConfig.bundle.resources['vulkan_runtime\\x64\\*.dll'] = './'
+		await fs.writeFile('tauri.windows.conf.json', JSON.stringify(tauriConfig, null, 4))
+	}
+	if (platform === 'linux') {
+		// Add vulkan depends
+		const tauriConfigContent = await fs.readFile('tauri.linux.conf.json', { encoding: 'utf-8' })
+		const tauriConfig = JSON.parse(tauriConfigContent)
+		tauriConfig.bundle.linux.deb.depends.push('libvulkan1')
+		tauriConfig.bundle.linux.deb.depends.push('mesa-vulkan-drivers')
+		await fs.writeFile('tauri.linux.conf.json', JSON.stringify(tauriConfig, null, 4))
 	}
 }
 
@@ -225,7 +258,6 @@ if (!process.env.GITHUB_ENV) {
 	}
 	console.log('bun install')
 	if (platform == 'windows') {
-		console.log(`$env:RUSTFLAGS = "-C target-feature=+crt-static"`)
 		console.log(`$env:FFMPEG_DIR = "${exports.ffmpeg}"`)
 		console.log(`$env:OPENBLAS_PATH = "${exports.openBlas}"`)
 		console.log(`$env:LIBCLANG_PATH = "${exports.libClang}"`)
@@ -241,13 +273,18 @@ if (!process.env.GITHUB_ENV) {
 			console.log(`$env:KNF_STATIC_CRT = "0"`)
 			console.log('$env:WHISPER_USE_STATIC_MSVC= "0"')
 		}
-		if (hasFeature('opencl')) {
-			console.log(`$env:CLBlast_DIR = "${exports.clblast}"`)
-			console.log('$env:CMAKE_BUILD_TYPE = "RelWithDebInfo"')
-		}
 		if (hasFeature('rocm')) {
 			console.log(`$env:ROCM_VERSION = "6.1.2"`)
 			console.log(`$env:ROCM_PATH = "${rocmPath}"`)
+		}
+
+		if (hasFeature('portable')) {
+			console.log('$env:WINDOWS_PORTABLE=1')
+		}
+
+		if (hasFeature('vulkan')) {
+			console.log(`$env:VULKAN_SDK = "${vulkanPath}"`)
+			console.log(`$env:PATH += "${vulkanRuntimePath}"`)
 		}
 	}
 	if (platform == 'macos') {
@@ -255,7 +292,7 @@ if (!process.env.GITHUB_ENV) {
 		console.log(`export WHISPER_METAL_EMBED_LIBRARY=ON`)
 	}
 	if (!process.env.GITHUB_ENV) {
-		const features = ['openblas', 'opencl', 'cuda'].filter((f) => hasFeature(f)).join(',')
+		const features = ['openblas', 'vulkan', 'cuda'].filter((f) => hasFeature(f)).join(',')
 		if (features) {
 			console.log(`bunx tauri build --features "${features}"`)
 		} else {
@@ -281,32 +318,21 @@ if (process.env.GITHUB_ENV) {
 		console.log('Adding ENV', openblas)
 		await fs.appendFile(process.env.GITHUB_ENV, openblas)
 
-		if (hasFeature('opencl')) {
-			const clblast = `CLBlast_DIR=${exports.clblast}\n`
-			console.log('Adding ENV', clblast)
-			await fs.appendFile(process.env.GITHUB_ENV, clblast)
-
-			const cmakeBuildType = `CMAKE_BUILD_TYPE=RelWithDebInfo\n`
-			console.log('Adding ENV', cmakeBuildType)
-			await fs.appendFile(process.env.GITHUB_ENV, cmakeBuildType)
-		}
-
-		if (hasFeature('cuda')) {
-			// link msvc dynamic
-			const knfStaticCrt = 'KNF_STATIC_CRT=0\n'
-			console.log('Adding ENV', knfStaticCrt)
-			await fs.appendFile(process.env.GITHUB_ENV, knfStaticCrt)
-
-			const whisperStaticMsvc = 'WHISPER_USE_STATIC_MSVC=0\n'
-			console.log('Adding ENV', whisperStaticMsvc)
-			await fs.appendFile(process.env.GITHUB_ENV, whisperStaticMsvc)
-		}
-
 		if (hasFeature('older-cpu')) {
 			await fs.appendFile(process.env.GITHUB_ENV, `WHISPER_NO_AVX=ON\n`)
 			await fs.appendFile(process.env.GITHUB_ENV, `WHISPER_NO_AVX2=ON\n`)
 			await fs.appendFile(process.env.GITHUB_ENV, `WHISPER_NO_FMA=ON\n`)
 			await fs.appendFile(process.env.GITHUB_ENV, `WHISPER_NO_F16C=ON\n`)
+		}
+
+		if (hasFeature('portable')) {
+			const windowsPortable = 'WINDOWS_PORTABLE=1\n'
+			console.log('Adding ENV', windowsPortable)
+			await fs.appendFile(process.env.GITHUB_ENV, windowsPortable)
+		}
+
+		if (hasFeature('vulkan')) {
+			await fs.appendFile(process.env.GITHUB_ENV, `VULKAN_SDK=${vulkanPath}\n`)
 		}
 	}
 }

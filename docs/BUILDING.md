@@ -6,15 +6,7 @@
 
 **Windows**:
 
-Tools: [vcpkg](https://vcpkg.io/en/)
-
 **Note** Install Clang into `C:\Program Files\LLVM` or set `LIBCLANG_PATH` env.
-
-`vcpkg` packages
-
-```console
-C:\vcpkg\vcpkg.exe install opencl
-```
 
 `Winget` packages
 
@@ -32,6 +24,12 @@ sudo apt-get update
 sudo apt-get install -y ffmpeg libopenblas-dev # runtime
 sudo apt-get install -y pkg-config build-essential libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev clang cmake libssl-dev # tauri
 sudo apt-get install -y libavutil-dev libavformat-dev libavfilter-dev libavdevice-dev # ffmpeg
+```
+
+_Vulkan (Linux)_
+
+```console
+sudo apt-get install -y mesa-vulkan-drivers
 ```
 
 ## Build
@@ -69,7 +67,6 @@ See [whisper.cpp#nvidia-support](https://github.com/ggerganov/whisper.cpp?tab=re
 			"ffmpeg\\bin\\x64\\*.dll": "./",
 			"openblas\\bin\\*.dll": "./",
 			"clblast\\bin\\*.dll": "./",
-			"C:\\vcpkg\\packages\\opencl_x64-windows\\bin\\*.dll": "./",
 			"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.5\\bin\\cudart64_*": "./",
 			"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.5\\bin\\cublas64_*": "./",
 			"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.5\\bin\\cublasLt64_*": "./"
@@ -106,6 +103,8 @@ bunx tauri build
 
 ## Gotchas
 
+On Windows when run `pre_build` with `--vulkan` you may need to run it with admin rights first time thanks to vulkan recent changes...
+
 On Ubuntu you may need to copy some libraries for `ffmpeg_next` library
 
 ```console
@@ -137,12 +136,6 @@ Rust analyzer failed to run on windows
 ```
 
 3. Relaunch `VSCode`
-
-When compile on Windows with OpenCL you should enable the following env:
-
-```console
-$env:CMAKE_BUILD_TYPE = "RelWithDebInfo"
-```
 
 Otherwise you will get error such as `ggml_gallocr_needs_realloc: graph has different number of nodes` and it will transcribe slower.
 
@@ -191,7 +184,14 @@ and update downloads links in landing page.
 bunx tinypng-go static/*.png
 ```
 
-Normalize wav file for tests
+## Convert markdown to PDF
+
+```console
+go install github.com/mandolyte/mdtopdf/cmd/md2pdf@latest
+md2pdf -i docs/PRIVACY_POLICY.md -o docs/PRIVACY_POLICY.pdf
+```
+
+## Normalize wav file for tests
 
 ```console
 ffmpeg -i file.wav -ar 16000 -ac 1 -c:a pcm_s16le normal.wav
@@ -240,6 +240,5 @@ bun run scripts/pre_build.js
 # Export env
 $env:PATH += ";$pwddesktop\src-tauri\clblast\bin"
 $env:PATH += ";$pwd\desktop\src-tauri\openblas\bin"
-$env:PATH += ";C:\vcpkg\packages\opencl_x64-windows\bin"
-cargo test --target x86_64-pc-windows-msvc --features "opencl" -p vibe_core --release -- --nocapture
+cargo test --target x86_64-pc-windows-msvc --features "vulkan" -p vibe_core --release -- --nocapture
 ```

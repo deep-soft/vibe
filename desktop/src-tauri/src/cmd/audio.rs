@@ -12,7 +12,7 @@ use tauri::{AppHandle, Emitter, Listener, Manager};
 #[cfg(target_os = "macos")]
 use crate::screen_capture_kit;
 
-use crate::utils::{random_string, LogError};
+use crate::utils::{get_local_time, random_string, LogError};
 
 type WavWriterHandle = Arc<Mutex<Option<hound::WavWriter<BufWriter<File>>>>>;
 
@@ -121,14 +121,12 @@ pub async fn start_record(app_handle: AppHandle, devices: Vec<AudioDevice>, stor
                 tracing::error!("An error occurred on stream: {}", err);
             };
 
-            let volume_factor = if cfg!(windows) { 3 } else { 1 };
-
             let stream = match config.sample_format() {
                 cpal::SampleFormat::I8 => device.build_input_stream(
                     &config.into(),
                     move |data, _: &_| {
                         tracing::debug!("Writing input data (I8)");
-                        write_input_data::<i8, i8>(data, &writer_2, volume_factor)
+                        write_input_data::<i8, i8>(data, &writer_2)
                     },
                     err_fn,
                     None,
@@ -137,7 +135,7 @@ pub async fn start_record(app_handle: AppHandle, devices: Vec<AudioDevice>, stor
                     &config.into(),
                     move |data, _: &_| {
                         tracing::debug!("Writing input data (I16)");
-                        write_input_data::<i16, i16>(data, &writer_2, volume_factor.into())
+                        write_input_data::<i16, i16>(data, &writer_2)
                     },
                     err_fn,
                     None,
@@ -146,7 +144,7 @@ pub async fn start_record(app_handle: AppHandle, devices: Vec<AudioDevice>, stor
                     &config.into(),
                     move |data, _: &_| {
                         tracing::debug!("Writing input data (I32)");
-                        write_input_data::<i32, i32>(data, &writer_2, volume_factor.into())
+                        write_input_data::<i32, i32>(data, &writer_2)
                     },
                     err_fn,
                     None,
@@ -155,7 +153,7 @@ pub async fn start_record(app_handle: AppHandle, devices: Vec<AudioDevice>, stor
                     &config.into(),
                     move |data, _: &_| {
                         tracing::debug!("Writing input data (F32)");
-                        write_input_data::<f32, f32>(data, &writer_2, volume_factor.into())
+                        write_input_data::<f32, f32>(data, &writer_2)
                     },
                     err_fn,
                     None,
@@ -203,7 +201,7 @@ pub async fn start_record(app_handle: AppHandle, devices: Vec<AudioDevice>, stor
             }
         }
 
-        let mut dst = if wav_paths.len() == 1 {
+        let dst = if wav_paths.len() == 1 {
             wav_paths[0].0.clone()
         } else if wav_paths[0].1 > 0 && wav_paths[1].1 > 0 {
             let dst = std::env::temp_dir().join(format!("{}.wav", random_string(10)));
@@ -218,23 +216,36 @@ pub async fn start_record(app_handle: AppHandle, devices: Vec<AudioDevice>, stor
             // choose the second WAV file or fallback to the first one
             wav_paths[1].0.clone()
         };
+
+        tracing::debug!("Emitting record_finish event");
+        let mut normalized = std::env::temp_dir().join(format!("{}.wav", get_local_time()));
+        vibe_core::audio::normalize(dst.clone(), normalized.clone()).map_err(|e| eyre!("{e:?}")).log_error();
+
         if store_in_documents {
-            if let Some(file_name) = dst.file_name() {
+            if let Some(file_name) = normalized.file_name() {
                 let documents_path = app_handle_clone.path().document_dir().map_err(|e| eyre!("{e:?}")).log_error();
                 if let Some(documents_path) = documents_path {
                     let target_path = documents_path.join(file_name);
-                    std::fs::rename(&dst, &target_path).context("Failed to move file to documents directory").map_err(|e| eyre!("{e:?}")).log_error();
-                    dst = target_path;
+                    if std::fs::rename(&normalized, &target_path).context("Failed to move file to documents directory").map_err(|e| eyre!("{e:?}")).is_err() {
+                        // if it's different filesystem
+                        std::fs::copy(&normalized, &target_path).context("Failed to copy file to documents directory").map_err(|e| eyre!("{e:?}")).log_error();
+                    }
+                    normalized = target_path;
                 }
             } else {
                 tracing::error!("Failed to retrieve file name from destination path");
             }
         }
 
-        tracing::debug!("Emitting record_finish event");
+        // Clean files
+        for (path, _) in wav_paths {
+            if path.exists() {
+                std::fs::remove_file(path).map_err(|e| eyre!("{e:?}")).log_error();
+            }
+        }
         app_handle_clone.emit(
             "record_finish",
-            json!({"path": dst.to_string_lossy(), "name": dst.file_name().map(|n| n.to_str().unwrap_or_default()).unwrap_or_default()}),
+            json!({"path": normalized.to_string_lossy(), "name": normalized.file_name().map(|n| n.to_str().unwrap_or_default()).unwrap_or_default()}),
         ).map_err(|e| eyre!("{e:?}")).log_error();
     });
 
@@ -260,7 +271,7 @@ fn wav_spec_from_config(config: &cpal::SupportedStreamConfig) -> hound::WavSpec 
 
 use std::ops::Mul;
 
-fn write_input_data<T, U>(input: &[T], writer: &WavWriterHandle, volume_factor: U)
+fn write_input_data<T, U>(input: &[T], writer: &WavWriterHandle)
 where
     T: Sample,
     U: Sample + hound::Sample + FromSample<T> + Mul<Output = U> + Copy,
@@ -268,7 +279,7 @@ where
     if let Ok(mut guard) = writer.try_lock() {
         if let Some(writer) = guard.as_mut() {
             for &sample in input.iter() {
-                let sample: U = U::from_sample(sample) * volume_factor;
+                let sample: U = U::from_sample(sample);
                 writer.write_sample(sample).ok();
             }
         }

@@ -1,4 +1,4 @@
-name: Windows Non avx2, cuda, portable
+name: Windows Non avx2 and portable
 
 on:
     workflow_dispatch:
@@ -13,7 +13,7 @@ on:
             required: false
             default: ""
 jobs:
-    publish-tauri:
+    publish:
         permissions:
             contents: write
         strategy:
@@ -22,31 +22,38 @@ jobs:
                 include:
                     # Windows no AVX2
                     - platform: "windows-latest"
-                      args: '--features="opencl"'
-                      pre-build-args: "--older-cpu --opencl"
+                      args: ''
+                      pre-build-args: "--older-cpu"
                       name: "older-cpu"
                       rust-version: "stable"
-                    
-                    # Windows cuda 12.5.0
+
+                    # Windows no AVX2
                     - platform: "windows-latest"
-                      args: '--features="cuda"'
-                      pre-build-args: "--cuda"
-                      name: 'nvidia-12.5.0'
-                      cuda-verison: '12.5.0'
+                      args: '--features="vulkan"'
+                      pre-build-args: "--older-cpu --vulkan"
+                      name: "older-cpu-vulkan"
                       rust-version: "stable"
+                    
+                    # # Windows cuda 12.5.0
+                    # - platform: "windows-latest"
+                    #   args: '--features="cuda"'
+                    #   pre-build-args: "--cuda"
+                    #   name: 'nvidia-12.5.0'
+                    #   cuda-verison: '12.5.0'
+                    #   rust-version: "stable"
 
                     # Windows cuda 11.8.0
-                    - platform: "windows-latest"
-                      args: '--features="cuda"'
-                      pre-build-args: "--cuda" 
-                      name: 'nvidia-11.8.0'
-                      cuda-verison: '11.8.0'
-                      rust-version: "stable"                      
+                    # - platform: "windows-latest"
+                    #   args: '--features="cuda"'
+                    #   pre-build-args: "--cuda" 
+                    #   name: 'nvidia-11.8.0'
+                    #   cuda-verison: '11.8.0'
+                    #   rust-version: "stable"                      
 
                     # Windows portable
                     - platform: "windows-latest" # Windows x86_64
-                      args: '--features="opencl"'
-                      pre-build-args: "--portable --opencl"
+                      args: '--features="vulkan"'
+                      pre-build-args: "--portable --vulkan"
                       name: portable
                       rust-version: "stable"
 
@@ -57,6 +64,14 @@ jobs:
             - name: Add msbuild to PATH
               uses: microsoft/setup-msbuild@v2
 
+            - name: Prepare Vulkan SDK for Linux
+              run: |
+                wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
+                sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-noble.list http://packages.lunarg.com/vulkan/lunarg-vulkan-noble.list
+                sudo apt update
+                sudo apt install vulkan-sdk -y
+                sudo apt-get install -y mesa-vulkan-drivers
+              if: ${{ contains(matrix.platform, 'ubuntu') && contains(matrix.args, 'vulkan') }}
 
             - name: Setup CUDA Toolkit
               if: contains(matrix.args, 'cuda')
@@ -86,7 +101,7 @@ jobs:
             - name: Build
               uses: tauri-apps/tauri-action@v0
               env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GH_TOKEN: ${{ secrets.GH_TOKEN }}
                   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
                   BUILD_DEBUG: ${{ github.event.inputs.debug }}
@@ -157,5 +172,5 @@ jobs:
                 bun scripts/publish.js target/release/bundle/nsis/$filePattern
               shell: pwsh
               env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                GH_TOKEN: ${{ secrets.GH_TOKEN }}
                 DEBUG: ${{ github.event.inputs.debug }}

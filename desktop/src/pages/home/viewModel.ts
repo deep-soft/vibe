@@ -19,6 +19,11 @@ import { ErrorModalContext } from '~/providers/ErrorModal'
 import { useFilesContext } from '~/providers/FilesProvider'
 import { ModelOptions, usePreferenceProvider } from '~/providers/Preference'
 import { UpdaterContext } from '~/providers/Updater'
+import * as ytDlp from '~/lib/ytdlp'
+import { useTranslation } from 'react-i18next'
+import { useToastProvider } from '~/providers/Toast'
+import { basename } from '@tauri-apps/api/path'
+import { askLlm } from '~/lib/llm'
 
 export interface BatchOptions {
 	files: NamedPath[]
@@ -37,13 +42,16 @@ export function viewModel() {
 	const [segments, setSegments] = useState<transcript.Segment[] | null>(null)
 	const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
 	const [progress, setProgress] = useState<number | null>(0)
+	const { t } = useTranslation()
+	const toast = useToastProvider()
 
 	const { files, setFiles } = useFilesContext()
-	const [tabIndex, setTabIndex] = useState(0)
 	const preference = usePreferenceProvider()
 	const [devices, setDevices] = useState<AudioDevice[]>([])
 	const [inputDevice, setInputDevice] = useState<AudioDevice | null>(null)
 	const [outputDevice, setOutputDevice] = useState<AudioDevice | null>(null)
+	const [audioUrl, setAudioUrl] = useState<string>('')
+	const [downloadingAudio, setDownloadingAudio] = useState(false)
 
 	const { updateApp, availableUpdate } = useContext(UpdaterContext)
 	const { setState: setErrorModal } = useContext(ErrorModalContext)
@@ -56,6 +64,32 @@ export function viewModel() {
 	useEffect(() => {
 		onFilesChanged()
 	}, [files])
+
+	async function switchToLinkTab() {
+		const exists = await ytDlp.exists()
+		if (!exists) {
+			const shouldInstall = await dialog.ask(t('common.ask-for-install-ytdlp-message'), {
+				title: t('common.ask-for-install-ytdlp-title'),
+				kind: 'info',
+				cancelLabel: t('common.cancel'),
+				okLabel: t('common.install-now'),
+			})
+			if (shouldInstall) {
+				try {
+					toast.setMessage(t('common.downloading-ytdlp'))
+					toast.setOpen(true)
+					await ytDlp.downloadYtDlp()
+					toast.setOpen(false)
+					preference.setHomeTabIndex(2)
+				} catch (e) {
+					console.error(e)
+					setErrorModal?.({ log: String(e), open: true })
+				}
+			}
+		} else {
+			preference.setHomeTabIndex(2)
+		}
+	}
 
 	async function handleNewSegment() {
 		await listen('transcribe_progress', (event) => {
@@ -73,7 +107,7 @@ export function viewModel() {
 	async function handleRecordFinish() {
 		await listen<{ path: string; name: string }>('record_finish', (event) => {
 			const { name, path } = event.payload
-			setTabIndex(0)
+			preference.setHomeTabIndex(1)
 			setFiles([{ name, path }])
 			setIsRecording(false)
 		})
@@ -110,8 +144,9 @@ export function viewModel() {
 		})
 		if (selected) {
 			const newFiles: NamedPath[] = []
-			for (const file of selected) {
-				newFiles.push({ name: file.name ?? '', path: file.path })
+			for (const path of selected) {
+				const name = await basename(path)
+				newFiles.push({ path, name })
 			}
 			setFiles(newFiles)
 
@@ -158,6 +193,21 @@ export function viewModel() {
 		})
 	}
 
+	async function checkVulkanOk() {
+		try {
+			await invoke('check_vulkan')
+		} catch (error) {
+			console.error(error)
+			await dialog.message(
+				`Your GPU is unsupported in this version of Vibe. Please download vibe_2.4.0_x64-setup.exe. Click OK to open the download page.`,
+				{
+					kind: 'error',
+				}
+			)
+			open(config.latestVersionWithoutVulkan)
+		}
+	}
+
 	async function CheckCpuAndInit() {
 		const features = await getX86Features()
 		if (features) {
@@ -187,6 +237,7 @@ export function viewModel() {
 	}
 
 	useEffect(() => {
+		checkVulkanOk()
 		CheckCpuAndInit()
 	}, [])
 
@@ -230,6 +281,18 @@ export function viewModel() {
 			const total = Math.round((performance.now() - startTime) / 1000)
 			console.info(`Transcribe took ${total} seconds.`)
 
+			if (preference.llmOptions.enabled) {
+				try {
+					const question = `${preference.llmOptions.prompt.replace('%s', transcript.asText(res.segments))}`
+					const answer = await askLlm(preference.llmOptions.apiKey!, question, preference.llmOptions.maxTokens)
+					if (answer) {
+						res.segments = [{ start: 0, stop: res.segments?.[res.segments?.length - 1].stop ?? 0, text: answer }]
+					}
+				} catch (e) {
+					console.error(e)
+				}
+			}
+
 			setSegments(res.segments)
 		} catch (error) {
 			if (!abortRef.current) {
@@ -250,6 +313,22 @@ export function viewModel() {
 					webview.getCurrentWebviewWindow().unminimize()
 					webview.getCurrentWebviewWindow().setFocus()
 				}
+			}
+		}
+	}
+
+	async function downloadAudio() {
+		if (audioUrl) {
+			setDownloadingAudio(true)
+			try {
+				const outPath = await ytDlp.downloadAudio(audioUrl, preference.storeRecordInDocuments)
+				preference.setHomeTabIndex(1)
+				setFiles([{ name: 'audio.m4a', path: outPath }])
+			} catch (e) {
+				console.error(e)
+				setErrorModal?.({ log: String(e), open: true })
+			} finally {
+				setDownloadingAudio(false)
 			}
 		}
 	}
@@ -283,7 +362,11 @@ export function viewModel() {
 		setSegments,
 		transcribe,
 		onAbort,
-		tabIndex,
-		setTabIndex,
+		switchToLinkTab,
+		audioUrl,
+		setAudioUrl,
+		downloadAudio,
+		downloadingAudio,
+		setDownloadingAudio,
 	}
 }
