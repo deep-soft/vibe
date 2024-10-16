@@ -1,12 +1,12 @@
 name: Deploy Landing
 
 on:
-#    push:
-#        branches:
-#            - main
-#        paths:
-#            - "landing/**"
-#            - "scripts/landing_links.js"
+    push:
+        branches:
+            - main
+        paths:
+            - "landing/**"
+            - "scripts/landing_links.js"
     workflow_dispatch:
 
 # Allow this job to clone the repo and create a page deployment
