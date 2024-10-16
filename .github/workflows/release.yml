@@ -1,9 +1,6 @@
 name: Release
 
 on:
-    push:
-        tags:
-            - "v*"
     workflow_dispatch:
 
 jobs:
@@ -72,3 +69,12 @@ jobs:
                   args: ${{ matrix.args }}
                   projectPath: "./desktop"
                   tauriScript: bunx tauri
+    update-landing:
+      runs-on: macos-latest
+      needs: publish-tauri
+      steps:
+        - uses: actions/checkout@v4
+        - name: Update landing URLs
+          run: gh workflow run landing.yml
+          env:
+            GH_TOKEN: ${{ secrets.GH_TOKEN }}
