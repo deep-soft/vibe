@@ -66,9 +66,9 @@ jobs:
             - name: Print Version
               shell: bash
               run: |
-                echo "VER: ${{ env.TAG_VERSION }}
-                echo "REF: ${{ env.TAG_REF }}
-                echo "BLD: ${{ env.TAG_BUILD }}
+                echo "VER: ${{ env.TAG_VERSION }}"
+                echo "REF: ${{ env.TAG_REF     }}"
+                echo "BLD: ${{ env.TAG_BUILD   }}"
                 echo "${{ env.TAG_NAME }}-${{ env.TAG_BUILD }}" > ${{ env.WORK_DIR_BASH }}/_version_.txt
                 echo "WORK_DIR_BASH=${{ env.WORK_DIR_BASH }}"
                 echo "WORK_DIR_OS=${{ env.WORK_DIR_OS }}"
