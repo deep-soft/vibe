@@ -1,0 +1,14 @@
+#BOF#
+# 2025.01.03 19:20
+
+#1
+#S:(?s)(\s*)*\"updater\":.*?{.*?\1},
+#R:
+#F:desktop/src-tauri/tauri.conf.json
+
+#2
+S:\"createUpdaterArtifacts\": true
+R:\"createUpdaterArtifacts\": false
+F:desktop/src-tauri/tauri.conf.json
+
+#EOF#
