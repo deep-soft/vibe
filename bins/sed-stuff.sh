@@ -65,7 +65,7 @@ if [[ -f "$file_in" ]]; then
           echo "grep 1";
           if [[ "$_str_" != "" ]]; then grep -Pzo "$_str_" "$_fil_"; else echo ""; fi
           echo "grep 2";
-          if [[ "$$_rpl_" != "" ]]; then grep -Pzo "$$_rpl_" "$_fil_"; else echo ""; fi
+          if [[ "$_rpl_" != "" ]]; then grep -Pzo "$_rpl_" "$_fil_"; else echo ""; fi
         fi;
       else
         echo "not_found: [$_fil_]";
