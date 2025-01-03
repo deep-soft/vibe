@@ -20,7 +20,6 @@ function hasFeature(name) {
 const config = {
 	ffmpegRealname: 'ffmpeg',
 	openblasRealname: 'openblas',
-	clblastRealname: 'clblast',
 	vulkanRuntimeRealName: 'vulkan_runtime',
 	vulkanSdkRealName: 'vulkan_sdk',
 	windows: {
@@ -29,9 +28,6 @@ const config = {
 
 		openBlasName: 'OpenBLAS-0.3.26-x64',
 		openBlasUrl: 'https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.26/OpenBLAS-0.3.26-x64.zip',
-
-		clblastName: 'CLBlast-1.6.2-windows-x64',
-		clblastUrl: 'https://github.com/CNugteren/CLBlast/releases/download/1.6.2/CLBlast-1.6.2-windows-x64.zip',
 
 		vulkanRuntimeName: 'VulkanRT-1.3.290.0-Components',
 		vulkanRuntimeUrl: 'https://sdk.lunarg.com/sdk/download/1.3.290.0/windows/VulkanRT-1.3.290.0-Components.zip',
@@ -75,7 +71,6 @@ const config = {
 const exports = {
 	ffmpeg: path.join(cwd, config.ffmpegRealname),
 	openBlas: path.join(cwd, config.openblasRealname),
-	clblast: path.join(cwd, config.clblastRealname, 'lib/cmake/CLBlast'),
 	libClang: 'C:\\Program Files\\LLVM\\bin',
 	cmake: 'C:\\Program Files\\CMake\\bin',
 }
@@ -114,22 +109,12 @@ if (platform == 'windows') {
 		fs.cp(path.join(config.openblasRealname, 'lib/libopenblas.lib'), path.join(config.openblasRealname, 'lib/openblas.lib'))
 	}
 
-	// Setup CLBlast
-	if (!(await fs.exists(config.clblastRealname)) && !hasFeature('cuda')) {
-		await $`C:\\msys64\\usr\\bin\\wget.exe -nc --show-progress ${config.windows.clblastUrl} -O ${config.windows.clblastName}.zip`
-		await $`"C:\\Program Files\\7-Zip\\7z.exe" x ${config.windows.clblastName}.zip` // 7z file inside
-		await $`"C:\\Program Files\\7-Zip\\7z.exe" x ${config.windows.clblastName}.7z` // Inner folder
-		await $`mv ${config.windows.clblastName} ${config.clblastRealname}`
-		await $`rm ${config.windows.clblastName}.zip`
-		await $`rm ${config.windows.clblastName}.7z`
-	}
-
 	// Setup Vulkan
 	if (!(await fs.exists(config.vulkanSdkRealName)) && hasFeature('vulkan')) {
 		await $`C:\\msys64\\usr\\bin\\wget.exe -nc --show-progress ${config.windows.vulkanSdkUrl} -O ${config.windows.vulkanSdkName}.exe`
 		let executable = path.join(cwd, `${config.windows.vulkanSdkName}.exe`)
 		let vulkanSdkRoot = path.join(cwd, config.vulkanSdkRealName)
-		await $`${executable} --root ${vulkanSdkRoot} --accept-licenses --default-answer --confirm-command install`
+		await $`${executable} --root ${vulkanSdkRoot} --accept-licenses --default-answer --confirm-command install copy_only=1` // copy_only=1 to run without admin rights
 
 		await $`C:\\msys64\\usr\\bin\\wget.exe -nc --show-progress ${config.windows.vulkanRuntimeUrl} -O ${config.windows.vulkanRuntimeName}.zip`
 		await $`"C:\\Program Files\\7-Zip\\7z.exe" x ${config.windows.vulkanRuntimeName}.zip` // 7z file inside
@@ -289,7 +274,6 @@ if (!process.env.GITHUB_ENV) {
 	}
 	if (platform == 'macos') {
 		console.log(`export FFMPEG_DIR="${exports.ffmpeg}"`)
-		console.log(`export WHISPER_METAL_EMBED_LIBRARY=ON`)
 	}
 	if (!process.env.GITHUB_ENV) {
 		const features = ['openblas', 'vulkan', 'cuda'].filter((f) => hasFeature(f)).join(',')
@@ -308,10 +292,6 @@ if (process.env.GITHUB_ENV) {
 		const ffmpeg = `FFMPEG_DIR=${exports.ffmpeg}\n`
 		console.log('Adding ENV', ffmpeg)
 		await fs.appendFile(process.env.GITHUB_ENV, ffmpeg)
-	}
-	if (platform == 'macos') {
-		const embed_metal = 'WHISPER_METAL_EMBED_LIBRARY=ON'
-		await fs.appendFile(process.env.GITHUB_ENV, embed_metal)
 	}
 	if (platform == 'windows') {
 		const openblas = `OPENBLAS_PATH=${exports.openBlas}\n`
@@ -344,12 +324,8 @@ if (action?.includes('--build' || action.includes('--dev'))) {
 	process.env['FFMPEG_DIR'] = exports.ffmpeg
 	if (platform === 'windows') {
 		process.env['OPENBLAS_PATH'] = exports.openBlas
-		process.env['CLBlast_DIR'] = exports.clblast
 		process.env['LIBCLANG_PATH'] = process.env['LIBCLANG_PATH'] || exports.libClang
 		process.env['PATH'] = `${process.env['PATH']};${exports.cmake}`
-	}
-	if (platform == 'macos') {
-		process.env['WHISPER_METAL_EMBED_LIBRARY'] = 'ON'
 	}
 	await $`bun install`
 	await $`bunx tauri ${action.includes('--dev') ? 'dev' : 'build'}`

@@ -10,7 +10,7 @@ use std::fs;
 use tauri::{App, Manager};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_shell::ShellExt;
-use tauri_plugin_store::StoreBuilder;
+use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
 use vibe_core::transcribe::WhisperContext;
 
@@ -26,21 +26,27 @@ pub fn setup(app: &App) -> Result<(), Box<dyn std::error::Error>> {
     // Add panic hook
     panic_hook::set_panic_hook(app.app_handle())?;
 
-    let app_data = app.path().app_local_data_dir()?;
-    fs::create_dir_all(app_data).expect("cant create local app data directory");
+    // Create app directories
+    let local_app_data_dir = app.path().app_local_data_dir()?;
+    let app_config_dir = app.path().app_config_dir()?;
+    fs::create_dir_all(&local_app_data_dir)
+        .unwrap_or_else(|_| panic!("cant create local app data directory at {}", local_app_data_dir.display()));
+    fs::create_dir_all(&app_config_dir)
+        .unwrap_or_else(|_| panic!("cant create app config directory at {}", app_config_dir.display()));
 
     // Manage model context
     app.manage(Mutex::new(None::<ModelContext>));
 
-    let store = StoreBuilder::new(&app.handle().clone(), STORE_FILENAME).build();
-    let _ = store.load();
+    let store = app.store(STORE_FILENAME)?;
 
     // Setup logging to terminal
     {
-        let mut app_handle = STATIC_APP.lock().unwrap();
+        let mut app_handle = STATIC_APP.lock().expect("lock");
         *app_handle = Some(app.handle().clone());
     }
     crate::logging::setup_logging(app.handle(), store).unwrap();
+    crate::cleaner::clean_old_logs(app.handle()).log_error();
+    crate::cleaner::clean_old_files().log_error();
     tracing::debug!("Vibe App Running");
 
     // Crash handler
@@ -62,7 +68,7 @@ pub fn setup(app: &App) -> Result<(), Box<dyn std::error::Error>> {
             #[cfg(unix)]
             tracing::error!("Crash exception code: {:?}", info);
 
-            if let Some(app_handle) = STATIC_APP.lock().unwrap().as_ref() {
+            if let Some(app_handle) = STATIC_APP.lock().expect("lock").as_ref() {
                 app_handle
                     .dialog()
                     .message("App crashed with error. Please register to Github and then click report.")
@@ -123,7 +129,7 @@ pub fn setup(app: &App) -> Result<(), Box<dyn std::error::Error>> {
             .resizable(true)
             .focused(true)
             .shadow(true)
-            .visible(false)
+            .visible(true) // TODO: hide it again? it shows flicker white on boot. but if we hide it won't show errors
             .build();
         if let Err(error) = result {
             tracing::error!("{:?}", error);

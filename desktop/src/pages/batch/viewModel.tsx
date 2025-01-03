@@ -13,15 +13,16 @@ import { emit, listen } from '@tauri-apps/api/event'
 import { usePreferenceProvider } from '~/providers/Preference'
 import { useFilesContext } from '~/providers/FilesProvider'
 import { basename } from '@tauri-apps/api/path'
-import { askLlm } from '~/lib/llm'
+import { Claude, Ollama, Llm } from '~/lib/llm'
 import * as transcript from '~/lib/transcript'
 import { path } from '@tauri-apps/api'
 import { toDocx } from '~/lib/docx'
+import toast from 'react-hot-toast'
 
 export function viewModel() {
 	const { files, setFiles } = useFilesContext()
 
-	const [format, setFormat] = useState<TextFormat>('normal')
+	const [formats, setFormats] = useState<TextFormat[]>(['normal'])
 	const [currentIndex, setCurrentIndex] = useState(0)
 	const [progress, setProgress] = useState<number | null>(null)
 	const [inProgress, setInProgress] = useState(false)
@@ -29,6 +30,17 @@ export function viewModel() {
 	const isAbortingRef = useRef<boolean>(false)
 	const preference = usePreferenceProvider()
 	const navigate = useNavigate()
+	const [llm, setLlm] = useState<Llm | null>(null)
+
+	useEffect(() => {
+		if (preference.llmConfig?.platform === 'ollama') {
+			const llmInstance = new Ollama(preference.llmConfig)
+			setLlm(llmInstance)
+		} else {
+			const llmInstance = new Claude(preference.llmConfig)
+			setLlm(llmInstance)
+		}
+	}, [preference.llmConfig])
 
 	function getText(segments: Segment[], format: TextFormat) {
 		if (format === 'srt') {
@@ -122,36 +134,44 @@ export function viewModel() {
 					options,
 					modelPath: preference.modelPath,
 					diarizeOptions,
+					ffmpegOptions: preference.ffmpegOptions,
 				})
 
 				// Calculate time
 				let total = Math.round((performance.now() - startTime) / 1000)
 				console.info(`Transcribe ${file.name} took ${total} seconds.`)
 
-				if (preference.llmOptions.enabled) {
+				let llmSegments: Segment[] | null = null
+				if (llm && preference.llmConfig?.enabled) {
 					try {
-						const question = `${preference.llmOptions.prompt.replace('%s', transcript.asText(res.segments))}`
-						const answer = await askLlm(preference.llmOptions.apiKey!, question, preference.llmOptions.maxTokens)
+						const question = `${preference.llmConfig.prompt.replace('%s', transcript.asText(res.segments))}`
+						const answer = await llm.ask(question)
 						if (answer) {
-							res.segments = [{ start: 0, stop: res.segments?.[res.segments?.length - 1].stop ?? 0, text: answer }]
+							llmSegments = [{ start: 0, stop: res.segments?.[res.segments?.length - 1].stop ?? 0, text: answer }]
 						}
 					} catch (e) {
+						toast.error(String(e))
 						console.error(e)
 					}
 				}
 
-				const dst = await invoke<string>('get_path_dst', { src: file.path, suffix: formatExtensions[format] })
-				// Write file
-				if (format === 'docx') {
-					const fileName = await path.basename(dst)
-					const doc = await toDocx(fileName, res.segments, preference.textAreaDirection)
-					const arrayBuffer = await doc.arrayBuffer()
-					const buffer = new Uint8Array(arrayBuffer)
-					fs.writeFile(dst, buffer)
-				} else {
-					await fs.writeTextFile(dst, getText(res.segments, format))
+				for (const format of formats) {
+					const dst = await invoke<string>('get_path_dst', { src: file.path, suffix: formatExtensions[format] })
+					// Write file
+					if (format === 'docx') {
+						const fileName = await path.basename(dst)
+						const doc = await toDocx(fileName, res.segments, preference.textAreaDirection)
+						const arrayBuffer = await doc.arrayBuffer()
+						const buffer = new Uint8Array(arrayBuffer)
+						fs.writeFile(dst, buffer)
+					} else {
+						await fs.writeTextFile(dst, getText(res.segments, format))
+					}
 				}
-
+				if (llmSegments) {
+					const summaryPath = await invoke<string>('get_path_dst', { src: file.path, suffix: '.summary.txt' })
+					await fs.writeTextFile(summaryPath, getText(llmSegments, 'srt'))
+				}
 				localIndex += 1
 				await new Promise((resolve) => setTimeout(resolve, 100))
 				setCurrentIndex(localIndex)
@@ -217,8 +237,8 @@ export function viewModel() {
 		cancel,
 		start,
 		files,
-		format,
-		setFormat,
+		formats,
+		setFormats,
 		preference: preference,
 	}
 }

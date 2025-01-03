@@ -23,7 +23,10 @@ import * as ytDlp from '~/lib/ytdlp'
 import { useTranslation } from 'react-i18next'
 import { useToastProvider } from '~/providers/Toast'
 import { basename } from '@tauri-apps/api/path'
-import { askLlm } from '~/lib/llm'
+import { Claude, Llm, Ollama } from '~/lib/llm'
+import { toast as hotToast } from 'react-hot-toast'
+import { useLocalStorage } from 'usehooks-ts'
+import { useConfirmExit } from '~/lib/useConfirmExit'
 
 export interface BatchOptions {
 	files: NamedPath[]
@@ -40,10 +43,14 @@ export function viewModel() {
 	const abortRef = useRef<boolean>(false)
 	const [isAborting, setIsAborting] = useState(false)
 	const [segments, setSegments] = useState<transcript.Segment[] | null>(null)
+	const [summarizeSegments, setSummarizeSegments] = useState<transcript.Segment[] | null>(null)
 	const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
 	const [progress, setProgress] = useState<number | null>(0)
 	const { t } = useTranslation()
 	const toast = useToastProvider()
+	const [llm, setLlm] = useState<Llm | null>(null)
+	const [transcriptTab, setTranscriptTab] = useLocalStorage<'transcript' | 'summary'>('prefs_transcript_tab', 'transcript')
+	useConfirmExit((segments?.length ?? 0) > 0 || loading)
 
 	const { files, setFiles } = useFilesContext()
 	const preference = usePreferenceProvider()
@@ -52,6 +59,8 @@ export function viewModel() {
 	const [outputDevice, setOutputDevice] = useState<AudioDevice | null>(null)
 	const [audioUrl, setAudioUrl] = useState<string>('')
 	const [downloadingAudio, setDownloadingAudio] = useState(false)
+	const [ytdlpProgress, setYtDlpProgress] = useState<number | null>(null)
+	const cancelYtDlpRef = useRef<boolean>(false)
 
 	const { updateApp, availableUpdate } = useContext(UpdaterContext)
 	const { setState: setErrorModal } = useContext(ErrorModalContext)
@@ -65,6 +74,30 @@ export function viewModel() {
 		onFilesChanged()
 	}, [files])
 
+	useEffect(() => {
+		if (preference.llmConfig?.platform === 'ollama') {
+			const llmInstance = new Ollama(preference.llmConfig)
+			setLlm(llmInstance)
+		} else {
+			const llmInstance = new Claude(preference.llmConfig)
+			setLlm(llmInstance)
+		}
+	}, [preference.llmConfig])
+
+	useEffect(() => {
+		listen<number>('ytdlp-progress', ({ payload }) => {
+			const newProgress = Math.ceil(payload)
+			if (!ytdlpProgress || newProgress > ytdlpProgress) {
+				setYtDlpProgress(newProgress)
+			}
+		})
+	}, [])
+
+	async function cancelYtDlpDownload() {
+		cancelYtDlpRef.current = true
+		event.emit('ytdlp-cancel')
+	}
+
 	async function switchToLinkTab() {
 		const exists = await ytDlp.exists()
 		if (!exists) {
@@ -77,12 +110,14 @@ export function viewModel() {
 			if (shouldInstall) {
 				try {
 					toast.setMessage(t('common.downloading-ytdlp'))
+					toast.setProgress(0)
 					toast.setOpen(true)
 					await ytDlp.downloadYtDlp()
 					toast.setOpen(false)
 					preference.setHomeTabIndex(2)
 				} catch (e) {
 					console.error(e)
+
 					setErrorModal?.({ log: String(e), open: true })
 				}
 			}
@@ -110,6 +145,7 @@ export function viewModel() {
 			preference.setHomeTabIndex(1)
 			setFiles([{ name, path }])
 			setIsRecording(false)
+			transcribe(path)
 		})
 	}
 
@@ -243,6 +279,9 @@ export function viewModel() {
 
 	async function startRecord() {
 		setSegments(null)
+		setSummarizeSegments(null)
+		setTranscriptTab('transcript')
+
 		setIsRecording(true)
 		let devices: AudioDevice[] = []
 		if (inputDevice) {
@@ -260,9 +299,13 @@ export function viewModel() {
 
 	async function transcribe(path: string) {
 		setSegments(null)
+		setSummarizeSegments(null)
+		setTranscriptTab('transcript')
+
 		setLoading(true)
 		abortRef.current = false
 
+		var newSegments: transcript.Segment[] = []
 		try {
 			await invoke('load_model', { modelPath: preference.modelPath, gpuDevice: preference.gpuDevice })
 			const options = {
@@ -275,25 +318,16 @@ export function viewModel() {
 				options,
 				modelPath: preference.modelPath,
 				diarizeOptions,
+				ffmpegOptions: preference.ffmpegOptions,
 			})
 
 			// Calcualte time
 			const total = Math.round((performance.now() - startTime) / 1000)
 			console.info(`Transcribe took ${total} seconds.`)
 
-			if (preference.llmOptions.enabled) {
-				try {
-					const question = `${preference.llmOptions.prompt.replace('%s', transcript.asText(res.segments))}`
-					const answer = await askLlm(preference.llmOptions.apiKey!, question, preference.llmOptions.maxTokens)
-					if (answer) {
-						res.segments = [{ start: 0, stop: res.segments?.[res.segments?.length - 1].stop ?? 0, text: answer }]
-					}
-				} catch (e) {
-					console.error(e)
-				}
-			}
-
+			newSegments = res.segments
 			setSegments(res.segments)
+			hotToast.success(t('common.transcribe-took', { total: String(total) }), { position: 'bottom-center' })
 		} catch (error) {
 			if (!abortRef.current) {
 				console.error('error: ', error)
@@ -315,13 +349,42 @@ export function viewModel() {
 				}
 			}
 		}
+
+		if (newSegments && llm && preference.llmConfig?.enabled) {
+			try {
+				const question = `${preference.llmConfig.prompt.replace('%s', transcript.asText(newSegments))}`
+				const answerPromise = llm.ask(question)
+				hotToast.promise(
+					answerPromise,
+					{
+						loading: t('common.summarize-loading'),
+						error: (error) => {
+							return String(error)
+						},
+						success: t('common.summarize-success'),
+					},
+					{ position: 'bottom-center' }
+				)
+				const answer = await answerPromise
+				if (answer) {
+					setSummarizeSegments([{ start: 0, stop: newSegments?.[newSegments?.length - 1].stop ?? 0, text: answer }])
+				}
+			} catch (e) {
+				console.error(e)
+			}
+		}
 	}
 
 	async function downloadAudio() {
 		if (audioUrl) {
+			setYtDlpProgress(0)
 			setDownloadingAudio(true)
 			try {
 				const outPath = await ytDlp.downloadAudio(audioUrl, preference.storeRecordInDocuments)
+				if (cancelYtDlpRef.current) {
+					cancelYtDlpRef.current = false
+					return
+				}
 				preference.setHomeTabIndex(1)
 				setFiles([{ name: 'audio.m4a', path: outPath }])
 				transcribe(outPath)
@@ -331,10 +394,19 @@ export function viewModel() {
 			} finally {
 				setDownloadingAudio(false)
 			}
+			setYtDlpProgress(null)
 		}
 	}
 
 	return {
+		cancelYtDlpRef,
+		cancelYtDlpDownload,
+		ytdlpProgress,
+		setYtDlpProgress,
+		transcriptTab,
+		setTranscriptTab,
+		summarizeSegments,
+		setSummarizeSegments,
 		devices,
 		setDevices,
 		inputDevice,

@@ -1,4 +1,4 @@
-use crate::cmd::{self, DiarizeOptions};
+use crate::cmd::{self, DiarizeOptions, FfmpegOptions};
 use crate::setup::ModelContext;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::Manager;
 use tokio::sync::Mutex;
-use utoipa::{OpenApi, ToSchema};
+use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use vibe_core::config::TranscribeOptions;
 use vibe_core::transcript::{Segment, Transcript};
@@ -39,7 +39,7 @@ pub async fn run(app_handle: tauri::AppHandle, host: String, port: u16) -> eyre:
     Ok(())
 }
 
-#[derive(Deserialize, Serialize, ToSchema)]
+#[derive(Deserialize, Serialize, utoipa::ToSchema)]
 struct LoadPayload {
     pub model_path: String,
     pub gpu_device: Option<i32>,
@@ -103,9 +103,15 @@ async fn transcribe(
     Json(payload): Json<TranscribeOptions>,
 ) -> Result<Json<Transcript>, (StatusCode, String)> {
     let model_context_state: tauri::State<'_, Mutex<Option<ModelContext>>> = app_handle.state();
-    let transcript = cmd::transcribe(app_handle.clone(), payload, model_context_state, DiarizeOptions::default())
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let transcript = cmd::transcribe(
+        app_handle.clone(),
+        payload,
+        model_context_state,
+        DiarizeOptions::default(),
+        FfmpegOptions::default(),
+    )
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(transcript))
 }

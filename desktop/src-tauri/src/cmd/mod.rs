@@ -1,4 +1,4 @@
-use crate::config::{DEAFULT_MODEL_FILENAME, DEAFULT_MODEL_URL, STORE_FILENAME};
+use crate::config::{DEAFULT_MODEL_FILENAME, DEFAULT_MODEL_URLS, STORE_FILENAME};
 use crate::setup::ModelContext;
 use crate::utils::{get_current_dir, LogError};
 use eyre::{bail, eyre, Context, ContextCompat, OptionExt, Result};
@@ -117,7 +117,7 @@ pub async fn download_model(app_handle: tauri::AppHandle, url: Option<String>) -
             // Update progress in background
             tauri::async_runtime::spawn(async move {
                 let percentage = (current as f64 / total as f64) * 100.0;
-                tracing::debug!("percentage: {}", percentage);
+                tracing::trace!("percentage: {}", percentage);
                 if let Err(e) = set_progress_bar(&app_handle, Some(percentage)) {
                     tracing::error!("Failed to set progress bar: {}", e);
                 }
@@ -132,17 +132,33 @@ pub async fn download_model(app_handle: tauri::AppHandle, url: Option<String>) -
         }
     };
 
-    let download_url = if let Some(url) = url {
-        url
+    if let Some(url) = url {
+        downloader
+            .download(&url, model_path.to_owned(), download_progress_callback)
+            .await?;
+        set_progress_bar(&app_handle_c, None)?;
+        Ok(model_path.to_str().context("to_str")?.to_string())
     } else {
-        DEAFULT_MODEL_URL.to_string()
-    };
-
-    downloader
-        .download(&download_url, model_path.to_owned(), download_progress_callback)
-        .await?;
-    set_progress_bar(&app_handle_c, None)?;
-    Ok(model_path.to_str().context("to_str")?.to_string())
+        let mut errors = Vec::new();
+        for url in DEFAULT_MODEL_URLS {
+            tracing::debug!("Download default model from URL {}", url);
+            match downloader
+                .download(url, model_path.to_owned(), download_progress_callback.clone())
+                .await
+            {
+                Err(e) => errors.push(format!("Failed to download from {}: {}", url, e)),
+                _ => {
+                    set_progress_bar(&app_handle_c, None)?;
+                    return Ok(model_path.to_str().context("to_str")?.to_string());
+                }
+            }
+        }
+        bail!(
+            "Could not download any model file. Errors: {:?}\nTried from {:?}",
+            errors,
+            DEFAULT_MODEL_URLS.join(",")
+        );
+    }
 }
 
 #[tauri::command]
@@ -179,7 +195,7 @@ pub async fn download_file(app_handle: tauri::AppHandle, url: String, path: Stri
             // Update progress in background
             tauri::async_runtime::spawn(async move {
                 let percentage = (current as f64 / total as f64) * 100.0;
-                tracing::debug!("percentage: {}", percentage);
+                tracing::trace!("percentage: {}", percentage);
                 if let Some(window) = app_handle.get_webview_window("main") {
                     if let Err(e) = window.emit("download_progress", (current, total)) {
                         tracing::error!("Failed to emit download progress: {}", e);
@@ -212,12 +228,40 @@ impl Default for DiarizeOptions {
     }
 }
 
+#[derive(Deserialize, Serialize, Clone)]
+pub struct FfmpegOptions {
+    pub normalize_loudness: bool,
+    pub custom_command: Option<String>,
+}
+
+impl Default for FfmpegOptions {
+    fn default() -> Self {
+        Self {
+            normalize_loudness: true,
+            custom_command: None,
+        }
+    }
+}
+
+impl FfmpegOptions {
+    pub fn to_vec(&self) -> Vec<String> {
+        let mut cmd = Vec::<String>::new();
+        if let Some(custom_cmd) = &self.custom_command {
+            cmd.extend(custom_cmd.split_whitespace().map(|s| s.to_string()));
+        } else if self.normalize_loudness {
+            cmd.extend(["-af".to_string(), "loudnorm=I=-16:TP=-1.5:LRA=11".to_string()]);
+        }
+        cmd
+    }
+}
+
 #[tauri::command]
 pub async fn transcribe(
     app_handle: tauri::AppHandle,
     options: vibe_core::config::TranscribeOptions,
     model_context_state: State<'_, Mutex<Option<ModelContext>>>,
     diarize_options: DiarizeOptions,
+    ffmpeg_options: FfmpegOptions,
 ) -> Result<Transcript> {
     let model_context = model_context_state.lock().await;
     if model_context.is_none() {
@@ -248,7 +292,6 @@ pub async fn transcribe(
     let app_handle_c = app_handle.clone();
     let app_handle_c1 = app_handle.clone();
     let progress_callback = move |progress: i32| {
-        // tracing::debug!("desktop progress is {}", progress);
         let _ = set_progress_bar(&app_handle, Some(progress.into()));
     };
 
@@ -274,6 +317,8 @@ pub async fn transcribe(
             threshold: diarize_options.threshold,
         });
     }
+    let ffmpeg_options = ffmpeg_options.to_vec();
+    tracing::debug!("ffmpeg additiona options: {:?}", ffmpeg_options);
     let unwind_result = catch_unwind(AssertUnwindSafe(|| {
         vibe_core::transcribe::transcribe(
             &ctx.handle,
@@ -282,6 +327,7 @@ pub async fn transcribe(
             Some(Box::new(new_segment_callback)),
             Some(Box::new(abort_callback)),
             core_diarize_options,
+            Some(ffmpeg_options),
         )
     }));
 
@@ -310,7 +356,7 @@ pub fn get_path_dst(src: String, suffix: String) -> Result<String> {
     let mut dst_path = parent.join(format!("{}{}", src_name, suffix));
 
     // Ensure we don't overwrite existing file
-    let mut counter = 0;
+    let mut counter = 1;
     while dst_path.exists() {
         dst_path = parent.join(format!("{} ({}){}", src_name, counter, suffix));
         counter += 1;
@@ -459,8 +505,26 @@ pub fn get_logs_folder(app_handle: tauri::AppHandle) -> Result<PathBuf> {
 }
 
 #[tauri::command]
+pub async fn show_log_path(app_handle: tauri::AppHandle) -> Result<()> {
+    let log_path = crate::logging::get_log_path(&app_handle)?;
+    if log_path.exists() {
+        showfile::show_path_in_file_manager(log_path);
+    } else if let Some(parent) = log_path.parent() {
+        showfile::show_path_in_file_manager(parent);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn show_temp_path() -> Result<()> {
+    let temp_path = vibe_core::get_vibe_temp_folder();
+    showfile::show_path_in_file_manager(temp_path);
+    Ok(())
+}
+
+#[tauri::command]
 pub fn get_models_folder(app_handle: tauri::AppHandle) -> Result<PathBuf> {
-    let store = app_handle.store_builder(STORE_FILENAME).build();
+    let store = app_handle.store(STORE_FILENAME)?;
 
     let models_folder = store.get("models_folder").and_then(|p| p.as_str().map(PathBuf::from));
     if let Some(models_folder) = models_folder {

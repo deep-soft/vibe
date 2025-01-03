@@ -20,7 +20,7 @@
     🔗 Download Vibe
   </a>
     &nbsp; | &nbsp; Give it a Star ⭐ | &nbsp;
-    <a target="_blank" href="https://ko-fi.com/thewh1teagle">Support the project 🤝</a>
+    <a target="_blank" href="https://thewh1teagle.github.io/vibe/?action=support-vibe">Support the project 🤝</a>
 </p>
 
 <hr />
@@ -43,7 +43,8 @@
 -   📂 Batch transcribe multiple files!
 -   📝 Support `SRT`, `VTT`, `TXT`, `HTML`, `PDF`, `JSON`, `DOCX` formats
 -   👀 Realtime preview
--   ✨ Summarize transcripts: Get concise summaries of transcripts via Claude API integration
+-   ✨ Summarize transcripts: Get quick, multilingual summaries using the Claude API
+-   🧠 Ollama support: Do local AI analysis and batch summaries with Ollama
 -   🌐 Translate to English from any language
 -   🖨️ Print transcript directly to any printer
 -   🔄 Automatic updates
@@ -68,7 +69,7 @@
 
 # Install notes
 
-See [Install.md](docs/INSTALL.md)
+See [Install.md](landing/static/docs/install.md)
 
 # Contribute 🤝
 
@@ -99,7 +100,7 @@ In addition you can add translation to [Vibe website](https://thewh1teagle.githu
 
 # Build 🛠️
 
-see [BUILDING.md](docs/BUILDING.md)
+see [BUILDING.md](landing/static/docs/building.md)
 
 # I want to know more!
 
@@ -107,11 +108,11 @@ Medium [post](https://medium.com/@thewh1teagle/creating-vibe-multilingual-audio-
 
 # Issue report
 
-You can open [new issue](https://github.com/thewh1teagle/vibe/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=%5BBug%5D%3A+) and it's recommend to check [DEBUG.md](docs/DEBUG.md) first.
+You can open [new issue](https://github.com/thewh1teagle/vibe/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=[Short+title]) and it's recommend to check [DEBUG.md](docs/DEBUG.md) first.
 
 # Privacy Policy 🔒
 
-Your privacy is important to us. Please review our [Privacy Policy](docs/PRIVACY_POLICY.pdf) to understand how we handle your data.
+Your privacy is important to us. Please review our [Privacy Policy](http://thewh1teagle.github.io/vibe/?action=open-privacy-policy) to understand how we handle your data.
 
 # Credits
 

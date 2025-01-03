@@ -1,11 +1,15 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod cleaner;
 mod cli;
 mod cmd;
 mod config;
 mod panic_hook;
+
+#[cfg(feature = "server")]
 mod server;
+
 mod setup;
 mod utils;
 use tauri::{Emitter, Manager};
@@ -83,6 +87,8 @@ fn main() -> Result<()> {
             cmd::is_portable,
             cmd::check_vulkan,
             cmd::get_logs_folder,
+            cmd::show_log_path,
+            cmd::show_temp_path,
             cmd::get_ffmpeg_path,
             cmd::ytdlp::download_audio,
             cmd::ytdlp::get_temp_path,

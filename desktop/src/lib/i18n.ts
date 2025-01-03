@@ -11,8 +11,10 @@ export const supportedLanguages: { [key: string]: string } = {
 	'pt-BR': 'portuguese',
 	'sv-SE': 'swedish',
 	'zh-CN': 'chinese',
+	'zh-HK': 'chinese (HK)',
 	'fr-FR': 'french',
 	'pl-PL': 'polish',
+	'no-NO': 'norwegian',
 	'it-IT': 'italian',
 	'hi-IN': 'hindi',
 }

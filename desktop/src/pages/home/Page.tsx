@@ -51,6 +51,7 @@ export default function Home() {
 				</a>
 			</div>
 
+			{/* Record */}
 			{vm.preference.homeTabIndex === 0 && (
 				<>
 					<div className="flex w-[300px] flex-col m-auto">
@@ -81,9 +82,12 @@ export default function Home() {
 								</button>
 							</>
 						)}
+
+						<ModelOptions options={vm.preference.modelOptions} setOptions={vm.preference.setModelOptions} />
 					</div>
 				</>
 			)}
+			{/* File */}
 			{vm.preference.homeTabIndex === 1 && (
 				<>
 					<div className="flex w-[300px] flex-col m-auto">
@@ -115,13 +119,30 @@ export default function Home() {
 					</div>
 					<div className="h-20" />
 					{vm.loading && <ProgressPanel isAborting={vm.isAborting} onAbort={vm.onAbort} progress={vm.progress} />}
+					{vm.summarizeSegments && (
+						<div role="tablist" className="tabs tabs-lifted tabs-lg self-center">
+							<a
+								onClick={() => vm.setTranscriptTab('transcript')}
+								role="tab"
+								className={cx('tab ', vm.transcriptTab == 'transcript' && 'text-primary font-medium tab-active')}>
+								{t('common.segments-tab')}
+							</a>
+
+							<a
+								onClick={() => vm.setTranscriptTab('summary')}
+								role="tab"
+								className={cx('tab', vm.transcriptTab == 'summary' && 'text-primary font-medium tab-active')}>
+								{t('common.summary-tab')}
+							</a>
+						</div>
+					)}
 					{(vm.segments || vm.loading) && (
 						<div className="flex flex-col mt-5 items-center w-[90%] max-w-[1000px] h-[84vh] m-auto">
 							<TextArea
-								setSegments={vm.setSegments}
+								setSegments={vm.transcriptTab == 'transcript' ? vm.setSegments : vm.setSummarizeSegments}
 								file={vm.files?.[0]}
 								placeholder={t('common.transcript-will-displayed-shortly')}
-								segments={vm.segments}
+								segments={vm.transcriptTab == 'transcript' ? vm.segments : vm.summarizeSegments}
 								readonly={vm.loading}
 							/>
 						</div>
@@ -129,6 +150,7 @@ export default function Home() {
 				</>
 			)}
 
+			{/* URL */}
 			{vm.preference.homeTabIndex === 2 && (
 				<div className="flex w-[300px] flex-col m-auto">
 					<div className="flex flex-col gap-0 mt-5">
@@ -142,9 +164,17 @@ export default function Home() {
 						/>
 
 						{vm.downloadingAudio ? (
-							<button className="btn relative btn-success mt-3">
-								<span className="loading loading-spinner"></span>
-							</button>
+							<>
+								<div className="w-full flex flex-col items-center mt-5">
+									<div className="flex flex-row items-center text-center gap-3 bg-base-200 p-4 rounded-2xl">
+										<span className="loading loading-spinner text-primary"></span>
+										<p>{t('common.downloading', { progress: vm.ytdlpProgress })}</p>
+										<button onClick={() => vm.cancelYtDlpDownload()} className="btn btn-primary btn-ghost btn-sm text-red-500">
+											{t('common.cancel')}
+										</button>
+									</div>
+								</div>
+							</>
 						) : (
 							<>
 								<label className="label cursor-pointer mt-2 mb-5">
@@ -156,9 +186,11 @@ export default function Home() {
 										checked={vm.preference.storeRecordInDocuments}
 									/>
 								</label>
+
 								<button onMouseDown={vm.downloadAudio} className="btn btn-primary mt-0">
 									{t('common.download-file')}
 								</button>
+								<ModelOptions options={vm.preference.modelOptions} setOptions={vm.preference.setModelOptions} />
 							</>
 						)}
 					</div>

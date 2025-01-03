@@ -12,14 +12,14 @@ jobs:
             matrix:
                 include:
                     - platform: "macos-latest" # for Arm based macs (M1 and above).
-                      args: "--target aarch64-apple-darwin"
+                      args: '--target aarch64-apple-darwin --features "server"'
                     - platform: "macos-latest" # for Intel based macs.
-                      args: "--target x86_64-apple-darwin"
+                      args: '--target x86_64-apple-darwin --features "server"'
                     - platform: "ubuntu-22.04" # Ubuntu 22.04 x86_64 (Works on 24.04 as well)
-                      args: '--features "vulkan"'
+                      args: '--features "vulkan,server"'
                       pre-build-args: "--vulkan"
                     - platform: "windows-latest" # Windows x86_64
-                      args: '--target x86_64-pc-windows-msvc --features "vulkan"'
+                      args: '--target x86_64-pc-windows-msvc --features "vulkan,server"'
                       pre-build-args: "--vulkan"
 
         runs-on: ${{ matrix.platform }}
@@ -54,6 +54,30 @@ jobs:
             # Run pre build
             - name: Run pre_build.js on ${{ matrix.platform }}
               run: bun scripts/pre_build.js ${{ matrix.pre-build-args }}
+
+            - name: Import Windows certificate
+              if: matrix.platform == 'windows-latest'
+              env:
+                WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+                WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+              run: |
+                # Import certificate
+                [IO.File]::WriteAllBytes('cert.pfx', [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+                Import-PfxCertificate -Exportable -FilePath "cert.pfx" -CertStoreLocation 'cert:\CurrentUser\My' -Password (ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText)
+
+                # Sign resources
+                $signtoolPath = (Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\" -Filter "signtool.exe" -Recurse | Where-Object FullName -like "*\x64\signtool.exe" | Select-Object -First 1).FullName
+                &$signtoolPath sign /f cert.pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 desktop\src-tauri\ffmpeg\bin\x64\*
+
+                # Sign tauri plugin DLLs
+                # TODO: remove once https://github.com/tauri-apps/tauri/pull/11676 merged
+                C:\msys64\usr\bin\wget.exe https://github.com/tauri-apps/binary-releases/releases/download/nsis-3/nsis-3.zip
+                Expand-Archive nsis-3.zip
+                Move-Item nsis-3\nsis-3.08 "$env:localappdata\tauri\NSIS"
+                Get-ChildItem -Path "$env:LOCALAPPDATA\tauri\NSIS\Plugins" -Filter '*.dll' -Recurse | ForEach-Object { 
+                  &$signtoolPath sign /f cert.pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $_.FullName
+                }
+
 
             - name: Build
               uses: tauri-apps/tauri-action@v0
