@@ -11,6 +11,7 @@ on:
 env:
   TAG_NAME: "vibe"
   TAG_REF:  "0000000"
+  EXE_FOLDER: "vibe/target/x86_64-pc-windows-msvc"
 
 jobs:
     publish-tauri:
@@ -36,6 +37,14 @@ jobs:
             - name: Checkout
               uses: deep-soft/checkout@v4
 #
+            - name: set WORK_DIR_OS
+              shell: bash
+              run: |
+                WORK_DIR_OS=$(pwd)
+                echo WORK_DIR_OS=$WORK_DIR_OS
+                echo WORK_DIR_OS=$WORK_DIR_OS>> $GITHUB_ENV
+                echo GITHUB_WORKSPACE=$GITHUB_WORKSPACE
+
             - name: Extract Version
               if: ("${{ matrix.platform }}" == "windows-latest")
               continue-on-error: true
@@ -50,14 +59,21 @@ jobs:
                 _ref_len_="${#_ref_org_}"
                 _ref_=$(echo ${_ref_all_::$_ref_len_})
                 _revision_=$_ref_
+                echo "TAG_REF=$_ref_" >> $GITHUB_ENV
                 echo "TAG_VERSION=$_prog_version_" >> $GITHUB_ENV;
                 echo "TAG_BUILD=$_revision_" >> $GITHUB_ENV;
 
             - name: Print Version
               shell: bash
               run: |
-                echo "TAG_VERSION=${{ env.TAG_VERSION }}";
-                echo "TAG_BUILD=${{ env.TAG_BUILD }}";
+                echo "VER: ${{ env.TAG_VERSION }}
+                echo "REF: ${{ env.TAG_REF }}
+                echo "BLD: ${{ env.TAG_BUILD }}
+                echo "${{ env.TAG_NAME }}-${{ env.TAG_BUILD }}" > ${{ env.WORK_DIR_BASH }}/_version_.txt
+                echo "WORK_DIR_BASH=${{ env.WORK_DIR_BASH }}"
+                echo "WORK_DIR_OS=${{ env.WORK_DIR_OS }}"
+                echo GITHUB_WORKSPACE=$GITHUB_WORKSPACE
+
 #
 # sed-stuff begin
             - name: sed-stuff
@@ -123,7 +139,7 @@ jobs:
               shell: bash
               run: |
                 mkdir ./SignOutput/
-                cp $(find -L target/release/* -name "*.exe") ./SignOutput/ || true;
+                cp $(find -L $EXE_FOLDER/* -name "*.exe") ./SignOutput/ || true;
                 ls -la ./SignOutput/ || true;
 
             - name: Create Archive 
@@ -134,7 +150,7 @@ jobs:
               with:
                 type: '7z'
                 filename: '${{ env.TAG_VERSION }}${{ env.TAG_BUILD }}-${{ matrix.platform }}'
-                directory: './SignOutput/'
+                directory: './SignOutput'
                 path: '*.exe'
                 exclusions: '*.git* /*node_modules/* .editorconfig'
                 volume_size: '2g'
@@ -147,7 +163,7 @@ jobs:
               uses: deep-soft/action-gh-release@v2.1
               with:
                 draft: true
-                tag_name: ${{ env.TAG_VERSION }}${{ env.TAG_BUILD }}
+                tag_name: v${{ env.TAG_VERSION }}${{ env.TAG_BUILD }}
                 filelist: ${{ steps.zip_archive.outputs.volumes_list_name }}
                 files: |
                     ${{ env.ZIP_ARCHIVE }}
