@@ -17,7 +17,7 @@ on:
 env:
   TAG_NAME: "vibe"
   TAG_REF:  "0000000"
-  EXE_FOLDER: "vibe/target/x86_64-pc-windows-msvc"
+  EXE_FOLDER: "target/x86_64-pc-windows-msvc"
 
 jobs:
     publish-tauri:
@@ -156,9 +156,9 @@ jobs:
                 type: '7z'
                 filename: '${{ env.TAG_VERSION }}${{ env.TAG_BUILD }}-${{ matrix.platform }}'
                 directory: './SignOutput'
-                path: '*.exe'
+                path: '.'
                 exclusions: '*.git* /*node_modules/* .editorconfig'
-                volume_size: '2g'
+                # volume_size: '2g'
                 env_variable: 'ZIP_ARCHIVE'
                 # archive name is ${{ env.ZIP_RELEASE_ARCHIVE }}
 
