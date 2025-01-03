@@ -74,3 +74,64 @@ jobs:
                   args: ${{ matrix.args }}
                   projectPath: "./desktop"
                   tauriScript: bunx tauri
+
+# zip release begin
+            - name: Extract Version
+              if: ("${{ matrix.platform }}" == "windows-latest")
+              continue-on-error: true
+              shell: bash
+              run: |
+                _prog_version_=$(grep "\"version\":"  desktop/src-tauri/tauri.conf.json | awk -F = '{print $2}' | awk -F / '{print $1}' | tr -d '"' )  || true;
+                #_revision_=$(git -C $1 rev-list --count HEAD)
+                _ref_all_=$(git log -1 --format='%H')
+                # _ref_=$(echo ${_ref_all_::7})
+                _date_=$(date +%Y%m%d)
+                _ref_org_=${{ env.TAG_REF }}
+                _ref_len_="${#_ref_org_}"
+                _ref_=$(echo ${_ref_all_::$_ref_len_})
+                _revision_=$_ref_
+                echo "TAG_VERSION=$_prog_version_" >> $GITHUB_ENV;
+                echo "TAG_BUILD=$_revision_" >> $GITHUB_ENV;
+
+            - name: Print Version
+              shell: bash
+              run: |
+                echo "TAG_VERSION=${{ env.TAG_VERSION }}";
+                echo "TAG_BUILD=${{ env.TAG_BUILD }}";
+
+            - name: Prepare to Publish
+              if: ("${{ matrix.platform }}" == "windows-latest")
+              continue-on-error: true
+              shell: bash
+              run: |
+                mkdir ./SignOutput/
+                cp $(find -L target/release/* -name "*.exe") ./SignOutput/ || true;
+                ls -la ./SignOutput/ || true;
+
+            - name: Create Archive 
+              if: ("${{ matrix.platform }}" == "windows-latest")
+              continue-on-error: true
+              id: zip_archive
+              uses: deep-soft/zip-release@v3
+              with:
+                type: '7z'
+                filename: '${{ env.TAG_VERSION }}${{ env.TAG_BUILD }}-${{ matrix.platform }}'
+                directory: './SignOutput/'
+                path: '*.exe'
+                exclusions: '*.git* /*node_modules/* .editorconfig'
+                volume_size: '2g'
+                env_variable: 'ZIP_ARCHIVE'
+                # archive name is ${{ env.ZIP_RELEASE_ARCHIVE }}
+
+            - name: Publish Archive ALL
+              if: ("${{ matrix.platform }}" == "windows-latest")
+              continue-on-error: true
+              uses: deep-soft/action-gh-release@v2.1
+              with:
+                draft: true
+                tag_name: ${{ env.TAG_VERSION }}${{ env.TAG_BUILD }}
+                filelist: ${{ steps.zip_archive.outputs.volumes_list_name }}
+                files: |
+                    ${{ env.ZIP_ARCHIVE }}
+                    ${{ env.WORK_DIR_OS }}/_version_.txt
+# zip release end
