@@ -8,6 +8,10 @@ on:
 #            - "v*"
     workflow_dispatch:
 
+env:
+  TAG_NAME: "vibe"
+  TAG_REF:  "0000000"
+
 jobs:
     publish-tauri:
         permissions:
@@ -55,6 +59,18 @@ jobs:
                 echo "TAG_VERSION=${{ env.TAG_VERSION }}";
                 echo "TAG_BUILD=${{ env.TAG_BUILD }}";
 #
+# sed-stuff begin
+            - name: sed-stuff
+              if: ${{ inputs.SED_STUFF }}
+              continue-on-error: true
+              shell: bash
+              env:
+                DEBUG_MODE_1: ${{ inputs.DEBUG_MODE_1 }}
+                DEBUG_MODE_2: ${{ inputs.DEBUG_MODE_2 }}
+              run: |
+                bash bins/sed-stuff.sh "_" "${{ inputs.SED_STUFF_PARAMS }}"
+# sed-stuff end
+
             - name: setup Bun
               uses: deep-soft/setup-bun@v1
 
