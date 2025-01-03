@@ -29,8 +29,32 @@ jobs:
 
         runs-on: ${{ matrix.platform }}
         steps:
-            - uses: deep-soft/checkout@v4
+            - name: Checkout
+              uses: deep-soft/checkout@v4
+#
+            - name: Extract Version
+              if: ("${{ matrix.platform }}" == "windows-latest")
+              continue-on-error: true
+              shell: bash
+              run: |
+                _prog_version_=$(grep "\"version\":"  desktop/src-tauri/tauri.conf.json | awk -F : '{print $2}' | awk -F , '{print $1}' | tr -d '"' )  || true;
+                #_revision_=$(git -C $1 rev-list --count HEAD)
+                _ref_all_=$(git log -1 --format='%H')
+                # _ref_=$(echo ${_ref_all_::7})
+                _date_=$(date +%Y%m%d)
+                _ref_org_=${{ env.TAG_REF }}
+                _ref_len_="${#_ref_org_}"
+                _ref_=$(echo ${_ref_all_::$_ref_len_})
+                _revision_=$_ref_
+                echo "TAG_VERSION=$_prog_version_" >> $GITHUB_ENV;
+                echo "TAG_BUILD=$_revision_" >> $GITHUB_ENV;
 
+            - name: Print Version
+              shell: bash
+              run: |
+                echo "TAG_VERSION=${{ env.TAG_VERSION }}";
+                echo "TAG_BUILD=${{ env.TAG_BUILD }}";
+#
             - name: setup Bun
               uses: deep-soft/setup-bun@v1
 
@@ -61,11 +85,12 @@ jobs:
               run: bun scripts/pre_build.js ${{ matrix.pre-build-args }}
 
             - name: Build
+              continue-on-error: true
               uses: deep-soft/tauri-action@v0
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+                  # TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+                  # TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
               with:
                   tagName: v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
                   releaseName: "v__VERSION__"
@@ -76,31 +101,8 @@ jobs:
                   tauriScript: bunx tauri
 
 # zip release begin
-            - name: Extract Version
-              if: ("${{ matrix.platform }}" == "windows-latest")
-              continue-on-error: true
-              shell: bash
-              run: |
-                _prog_version_=$(grep "\"version\":"  desktop/src-tauri/tauri.conf.json | awk -F = '{print $2}' | awk -F / '{print $1}' | tr -d '"' )  || true;
-                #_revision_=$(git -C $1 rev-list --count HEAD)
-                _ref_all_=$(git log -1 --format='%H')
-                # _ref_=$(echo ${_ref_all_::7})
-                _date_=$(date +%Y%m%d)
-                _ref_org_=${{ env.TAG_REF }}
-                _ref_len_="${#_ref_org_}"
-                _ref_=$(echo ${_ref_all_::$_ref_len_})
-                _revision_=$_ref_
-                echo "TAG_VERSION=$_prog_version_" >> $GITHUB_ENV;
-                echo "TAG_BUILD=$_revision_" >> $GITHUB_ENV;
-
-            - name: Print Version
-              shell: bash
-              run: |
-                echo "TAG_VERSION=${{ env.TAG_VERSION }}";
-                echo "TAG_BUILD=${{ env.TAG_BUILD }}";
-
             - name: Prepare to Publish
-              if: ("${{ matrix.platform }}" == "windows-latest")
+              if: ${{ contains(matrix.platform, 'windows-latest') }}
               continue-on-error: true
               shell: bash
               run: |
@@ -109,7 +111,7 @@ jobs:
                 ls -la ./SignOutput/ || true;
 
             - name: Create Archive 
-              if: ("${{ matrix.platform }}" == "windows-latest")
+              if: ${{ contains(matrix.platform, 'windows-latest') }}
               continue-on-error: true
               id: zip_archive
               uses: deep-soft/zip-release@v3
@@ -124,7 +126,7 @@ jobs:
                 # archive name is ${{ env.ZIP_RELEASE_ARCHIVE }}
 
             - name: Publish Archive ALL
-              if: ("${{ matrix.platform }}" == "windows-latest")
+              if: ${{ contains(matrix.platform, 'windows-latest') }}
               continue-on-error: true
               uses: deep-soft/action-gh-release@v2.1
               with:
