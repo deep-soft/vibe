@@ -3,10 +3,16 @@
 name: act-release
 
 on:
-#    push:
-#        tags:
-#            - "v*"
-    workflow_dispatch:
+  workflow_dispatch:
+    inputs:
+      SED_STUFF:
+        description: SED_STUFF
+        type: boolean
+        default: false
+        required: true
+#  push:
+#      tags:
+#          - "v*"
 
 env:
   TAG_NAME: "vibe"
