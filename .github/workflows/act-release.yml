@@ -10,6 +10,11 @@ on:
         type: boolean
         default: false
         required: true
+      DEBUG_MODE:
+        description: DEBUG_MODE
+        default: "N"
+        required: true
+
 #  push:
 #      tags:
 #          - "v*"
@@ -56,7 +61,7 @@ jobs:
               continue-on-error: true
               shell: bash
               run: |
-                _prog_version_=$(grep "\"version\":"  desktop/src-tauri/tauri.conf.json | awk -F : '{print $2}' | awk -F , '{print $1}' | tr -d '"' )  || true;
+                _prog_version_=$(grep "\"version\":" desktop/src-tauri/tauri.conf.json | awk -F : '{print $2}' | awk -F , '{print $1}' | tr -d '"' | xargs) || true;
                 #_revision_=$(git -C $1 rev-list --count HEAD)
                 _ref_all_=$(git log -1 --format='%H')
                 # _ref_=$(echo ${_ref_all_::7})
@@ -72,11 +77,11 @@ jobs:
             - name: Print Version
               shell: bash
               run: |
-                echo "VER: ${{ env.TAG_VERSION }}"
-                echo "REF: ${{ env.TAG_REF     }}"
-                echo "BLD: ${{ env.TAG_BUILD   }}"
-                echo "WORK_DIR_OS=${{ env.WORK_DIR_OS }}"
-                echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+                echo "VER: [${{ env.TAG_VERSION }}]"
+                echo "REF: [${{ env.TAG_REF     }}]"
+                echo "BLD: [${{ env.TAG_BUILD   }}]"
+                echo "WORK_DIR_OS=[${{ env.WORK_DIR_OS }}]"
+                echo "GITHUB_WORKSPACE=[$GITHUB_WORKSPACE]"
                 echo "${{ env.TAG_NAME }}-${{ env.TAG_BUILD }}" > ${{ env.WORK_DIR_OS }}/_version_.txt
 
 #
