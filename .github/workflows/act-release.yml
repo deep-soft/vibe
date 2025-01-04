@@ -151,24 +151,24 @@ jobs:
               if: ${{ contains(matrix.platform, 'windows-latest') }}
               continue-on-error: true
               id: zip_archive
-              uses: deep-soft/zip-release@v3
+              uses: deep-soft/zip-release@v5
               with:
                 type: '7z'
-                filename: '${{ env.TAG_VERSION }}${{ env.TAG_BUILD }}-${{ matrix.platform }}'
+                filename: '${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}-${{ matrix.platform }}'
                 directory: './SignOutput'
                 path: '.'
                 exclusions: '*.git* /*node_modules/* .editorconfig'
-                # volume_size: '2g'
-                env_variable: 'ZIP_ARCHIVE'
-                # archive name is ${{ env.ZIP_RELEASE_ARCHIVE }}
+                volume_size: '2g'
+                env_variable: 'ZIP_ARCHIVE' # archive name was ${{ env.ZIP_RELEASE_ARCHIVE }}
+                verbose: yes
 
-            - name: Publish Archive ALL
+            - name: Publish Archive
               if: ${{ contains(matrix.platform, 'windows-latest') }}
               continue-on-error: true
               uses: deep-soft/action-gh-release@v2.1
               with:
                 draft: true
-                tag_name: v${{ env.TAG_VERSION }}${{ env.TAG_BUILD }}
+                tag_name: v${{ env.TAG_VERSION }}
                 filelist: ${{ steps.zip_archive.outputs.volumes_list_name }}
                 files: |
                     ${{ env.ZIP_ARCHIVE }}
