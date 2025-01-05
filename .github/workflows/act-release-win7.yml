@@ -1,6 +1,6 @@
 # 2025-01-06 00:00
 # act-release-win7.yml
-name: act-release
+name: act-release-win7
 
 on:
   workflow_dispatch:
