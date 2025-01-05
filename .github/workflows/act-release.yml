@@ -23,6 +23,8 @@ env:
   TAG_NAME: "vibe"
   TAG_REF:  "0000000"
   EXE_FOLDER: "target/x86_64-pc-windows-msvc"
+  WINDOWS_CERTIFICATE: '${{ secrets.WINDOWS_CERTIFICATE }}'
+  WINDOWS_CERTIFICATE_PASSWORD: '${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}'
 
 jobs:
     publish-tauri:
@@ -131,8 +133,10 @@ jobs:
               uses: deep-soft/tauri-action@v0
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  # TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-                  # TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+                  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+                  WINDOWS_CERTIFICATE: '${{ secrets.WINDOWS_CERTIFICATE }}'
+                  WINDOWS_CERTIFICATE_PASSWORD: '${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}'
               with:
                   tagName: v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
                   releaseName: "v__VERSION__"
