@@ -152,7 +152,8 @@ jobs:
 
             - name: cargo update
               run: |
-                cargo update
+                # cargo update
+                cargo update jsonptr@0.4.7 --precise ver
 
             - name: Install frontend dependencies
               working-directory: ./desktop
