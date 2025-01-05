@@ -1,4 +1,4 @@
-# 2025-01-05 19:30
+# 2025-01-05 19:40
 # test-vars.yml
 name: test-vars
 
@@ -62,21 +62,24 @@ jobs:
               working-directory: ./desktop
 #2
             - name: test two
+              working-directory: ./desktop
+              env:
+                TAURI_SIGNING_PRIVATE_KEY_PASSWORD: '${{ secrets.TAURI_KEY_PASSWORD }}'
               run: |
                 bunx tauri signer generate -w ../test_varp.tx
-              working-directory: ./desktop
+
 #3
-            - name: test three
-              continue-on-error: true
-              uses: deep-soft/tauri-action@v0
-              env:
-                  GITHUB_TOKEN:                       '${{ secrets.GITHUB_TOKEN }}'
-                  TAURI_SIGNING_PRIVATE_KEY:          '${{ secrets.TAURI_PRIVATE_KEY  }}'
-                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: '${{ secrets.TAURI_KEY_PASSWORD }}'
-              with:
-                  projectPath: "./desktop"
-                  args: 'signer generate -w ../test_vark.tx'
-                  tauriScript: bunx tauri
+#             - name: test three
+#               continue-on-error: true
+#               uses: deep-soft/tauri-action@v0
+#               env:
+#                   GITHUB_TOKEN:                       '${{ secrets.GITHUB_TOKEN }}'
+#                   TAURI_SIGNING_PRIVATE_KEY:          '${{ secrets.TAURI_PRIVATE_KEY  }}'
+#                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: '${{ secrets.TAURI_KEY_PASSWORD }}'
+#               with:
+#                   projectPath: "./desktop"
+#                   args: 'signer generate -w ../test_vark.tx'
+#                   tauriScript: bunx tauri
 #100
             - name: upload result
               continue-on-error: true
