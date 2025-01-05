@@ -46,6 +46,9 @@ jobs:
                 echo ${{ env.WINDOWS_CERTIFICATE_PASSWORD       }} >> test_vars.tx
                 echo "#end"                                        >> test_vars.tx
 #2
+            - name: setup Bun
+              uses: deep-soft/setup-bun@v1
+#
             - name: Install frontend dependencies
               run: |
                 bun install
