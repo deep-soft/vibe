@@ -87,7 +87,7 @@ jobs:
                 #_revision_=$_ref_
                 _revision_=$TAG_BUILD-$_date_-$_ref_;
                 #
-                echo "VERSION=$_prog_version_" >> $GITHUB_ENV;
+                echo "PROG_VERSION=$_prog_version_" >> $GITHUB_ENV;
                 echo "TAG_VERSION=v$_prog_version_" >> $GITHUB_ENV;
                 echo "TAG_REF=$_ref_" >> $GITHUB_ENV;
                 echo "TAG_BUILD=$_revision_" >> $GITHUB_ENV;
