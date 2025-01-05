@@ -1,0 +1,54 @@
+# 2025-01-05 10:40
+# test-vars.yml
+name: test-vars
+
+on:
+  workflow_dispatch:
+
+env:
+  TAG_NAME: "_NO_NAME_"
+  TAG_REF:  "0000000"
+
+jobs:
+    test-vars:
+        permissions:
+            contents: write
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+#                    - platform: "macos-latest" # for Arm based macs (M1 and above).
+#                      args: "--target aarch64-apple-darwin"
+#                    - platform: "macos-latest" # for Intel based macs.
+#                      args: "--target x86_64-apple-darwin"
+                    - platform: "ubuntu-22.04" # Ubuntu 22.04 x86_64 (Works on 24.04 as well)
+                      args: '--features "vulkan"'
+                      pre-build-args: "--vulkan"
+#                    - platform: "windows-latest" # Windows x86_64
+#                      args: '--target x86_64-pc-windows-msvc --features "vulkan"'
+#                      pre-build-args: "--vulkan"
+
+#
+        runs-on: ${{ matrix.platform }}
+        steps:
+            - name: test one
+              env:
+                TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+                TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+                WINDOWS_CERTIFICATE: '${{ secrets.WINDOWS_CERTIFICATE }}'
+                WINDOWS_CERTIFICATE_PASSWORD: '${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}'
+              run: |
+                echo "#begin"                                       > test_vars.tx
+                echo ${{ env.TAURI_SIGNING_PRIVATE_KEY          }} >> test_vars.tx
+                echo ${{ env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }} >> test_vars.tx
+                echo ${{ env.WINDOWS_CERTIFICATE                }} >> test_vars.tx
+                echo ${{ env.WINDOWS_CERTIFICATE_PASSWORD       }} >> test_vars.tx
+                echo "#end"                                        >> test_vars.tx
+#
+            - name: upload result
+              continue-on-error: true
+              uses: deep-soft/upload-artifact@v4
+              with:
+                name: test_vars
+                path: test_vars.tx
+#
