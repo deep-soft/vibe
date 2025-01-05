@@ -49,6 +49,10 @@ jobs:
             - name: setup Bun
               uses: deep-soft/setup-bun@v1
 #
+            - name: Bun init
+              run: |
+                bun init
+#
             - name: Install frontend dependencies
               run: |
                 bun install
