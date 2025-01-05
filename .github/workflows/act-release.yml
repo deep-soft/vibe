@@ -193,7 +193,8 @@ jobs:
 
             - name: Build
               continue-on-error: true
-              uses: deep-soft/tauri-action@v0
+              #uses: deep-soft/tauri-action@v0
+              uses: deep-soft/tauri-action@dev
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   TAURI_SIGNING_PRIVATE_KEY:          '${{ secrets.TAURI_PRIVATE_KEY }}'
