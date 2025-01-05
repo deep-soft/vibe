@@ -1,14 +1,19 @@
 #BOF#
-# 2025.01.03 19:20
+# 2025.01.05 10:00
 
 #1
-#S:(?s)(\s*)*\"updater\":.*?{.*?\1},
-#R:
-#F:desktop/src-tauri/tauri.conf.json
-
-#2
 S:\"createUpdaterArtifacts\": true
 R:\"createUpdaterArtifacts\": false
 F:desktop/src-tauri/tauri.conf.json
+
+#2
+S:"certificateThumbprint": "45DCFF335BB538C58489BD03BF167D29DDA53110",
+R:"certificateThumbprint": "0F2D5A0933FE92FFD80C2459A29D9B29877ECE36",
+F:desktop/src-tauri/tauri.windows.conf.json
+
+#9
+#S:(?s)(\s*)*\"updater\":.*?{.*?\1},
+#R:
+#F:desktop/src-tauri/tauri.conf.json
 
 #EOF#
