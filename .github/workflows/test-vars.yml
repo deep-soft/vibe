@@ -1,4 +1,4 @@
-# 2025-01-05 11:50
+# 2025-01-05 12:00
 # test-vars.yml
 name: test-vars
 
@@ -60,8 +60,13 @@ jobs:
               run: |
                 bun install
               working-directory: ./desktop
-#
+#2
             - name: test two
+              run: |
+                bunx tauri signer generate -w ../test_varp.tx
+              working-directory: ./desktop
+#3
+            - name: test three
               continue-on-error: true
               uses: deep-soft/tauri-action@v0
               env:
@@ -70,9 +75,9 @@ jobs:
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
               with:
                   projectPath: "./desktop"
-                  args: 'signer generate "-w ../test_vark.tx"'
+                  args: 'signer generate -w ../test_vark.tx'
                   tauriScript: bunx tauri
-#3
+#100
             - name: upload result
               continue-on-error: true
               uses: deep-soft/upload-artifact@v4
@@ -81,6 +86,7 @@ jobs:
                 path: |
                   test_vars.tx
                   test_vark.tx
+                  test_varp.tx
 #
 
 # -- end ---
