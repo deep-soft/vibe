@@ -70,7 +70,7 @@ jobs:
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
               with:
                   projectPath: "./desktop"
-                  args: 'signer generate -w ../test_vark.tx'
+                  args: 'signer generate "-w ../test_vark.tx"'
                   tauriScript: bunx tauri
 #3
             - name: upload result
