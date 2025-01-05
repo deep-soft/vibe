@@ -1,0 +1,286 @@
+# 2025-01-06 00:00
+# act-release-win7.yml
+name: act-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      SED_STUFF:
+        description: SED_STUFF
+        type: boolean
+        default: true
+        required: true
+      archive_ALL:
+        description: Archive ALL
+        type: boolean
+        default: false
+        required: true
+      DEBUG_MODE:
+        description: DEBUG_MODE
+        default: "Y"
+        required: true
+
+#  push:
+#      tags:
+#          - "v*"
+
+env:
+  PROG_NAME:    "vibe"
+  PROG_VERSION: "1.0.0"
+  TAG_NAME:     "vibe"
+  TAG_VERSION:  "v1.0.0"
+  TAG_REF:      "0000000"
+  TAG_BUILD:    "b"
+  EXE_FOLDER:   "target/x86_64-pc-windows-msvc/release"
+  WIN_RUST_VERSION: "1.75"
+
+jobs:
+    publish-tauri:
+        permissions:
+            contents: write
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - platform: "windows-latest" # Windows x86_64
+                      cpu: 'x86_64'
+                      args: '--target x86_64-pc-windows-msvc --features "vulkan"'
+                      args_verbose: '--verbose --target x86_64-pc-windows-msvc --features "vulkan" -- --verbose'
+                      pre-build-args: "--vulkan"
+
+        runs-on: ${{ matrix.platform }}
+        steps:
+            - name: Checkout
+              uses: deep-soft/checkout@v4
+#
+            - name: set WORK_DIR_OS
+              shell: bash
+              run: |
+                WORK_DIR_OS=$(pwd)
+                echo WORK_DIR_OS=$WORK_DIR_OS
+                echo WORK_DIR_OS=$WORK_DIR_OS >> $GITHUB_ENV
+                echo GITHUB_WORKSPACE=$GITHUB_WORKSPACE
+
+            - name: Extract Version
+              if: ("${{ matrix.platform }}" == "windows-latest")
+              continue-on-error: true
+              shell: bash
+              run: |
+                _prog_version_=$(grep "\"version\":" desktop/src-tauri/tauri.conf.json | awk -F : '{print $2}' | awk -F , '{print $1}' | tr -d '"' | xargs) || true;
+                #_revision_=$(git -C $1 rev-list --count HEAD)
+                _ref_all_=$(git log -1 --format='%H');
+                # _ref_=$(echo ${_ref_all_::7})
+                _date_=$(date +%Y%m%d);
+                _ref_org_=${{ env.TAG_REF }};
+                _ref_len_="${#_ref_org_}";
+                _ref_=$(echo ${_ref_all_::$_ref_len_});
+                #_revision_=$_ref_
+                _revision_=$TAG_BUILD-$_date_-$_ref_;
+                #
+                echo "PROG_VERSION=$_prog_version_" >> $GITHUB_ENV;
+                echo "TAG_VERSION=v$_prog_version_" >> $GITHUB_ENV;
+                echo "TAG_REF=$_ref_" >> $GITHUB_ENV;
+                echo "TAG_BUILD=$_revision_" >> $GITHUB_ENV;
+
+            - name: Print Version
+              shell: bash
+              run: |
+                echo "VER: [${{ env.PROG_VERSION }}]";
+                echo "VER: [${{ env.TAG_VERSION  }}]";
+                echo "REF: [${{ env.TAG_REF      }}]";
+                echo "BLD: [${{ env.TAG_BUILD    }}]";
+                echo "WORK_DIR_OS=[${{ env.WORK_DIR_OS }}]";
+                echo "GITHUB_WORKSPACE=[$GITHUB_WORKSPACE]";
+                echo "${{ env.TAG_NAME }}-${{ env.TAG_BUILD }}" > ${{ env.WORK_DIR_OS }}/_version_.txt;
+                ls -la ${{ env.WORK_DIR_OS }}/_version_.txt || true;
+
+#
+# sed-stuff begin
+            - name: sed-stuff
+              if: ${{ inputs.SED_STUFF }}
+              continue-on-error: true
+              shell: bash
+              env:
+                DEBUG_MODE_1: ${{ inputs.DEBUG_MODE }}
+                DEBUG_MODE_2: ${{ inputs.DEBUG_MODE }}
+              run: |
+                bash bins/sed-stuff.sh "_" "${{ inputs.SED_STUFF_PARAMS }}";
+# sed-stuff end
+
+#patch begin
+            - name: Prepare for patch 1
+              continue-on-error: false
+              shell: bash
+              run: |
+                cp ./bins/VIBE_O_SH_PRE.sh ./VIBE_O_SH_PRE.sh;
+                cp ./bins/VIBE_O_SH.sh     ./VIBE_O_SH.sh;
+                cp ./bins/VIBE_O_HL.txt    ./VIBE_O_HL.txt;
+                echo prepatch 1 run;
+                bash ./VIBE_O_SH_PRE.sh;
+                echo Done prepatch 1;
+                if [ "${{ env.DEBUG_LS }}" = "yes" ]; then
+                  ls -l;
+                  pwd;
+                fi
+
+            - name: Apply patch 1
+              # continue-on-error: true
+              shell: bash
+              env: 
+                SED_EXE: ${{ env.SED_EXE }}
+              run: |
+                echo patch 1 run_1;
+                bash ./VIBE_O_SH.sh;
+                echo patch 1 run_2;
+                bash ./VIBE_O_SH.sh;
+                echo patch 1 run_3;
+                bash ./VIBE_O_SH.sh;
+                echo Done patch 1
+#patch end
+
+            - name: setup Bun
+              uses: deep-soft/setup-bun@v1
+
+            - name: Rust cache
+              uses: deep-soft/rust-cache@v2
+
+            - name: Install Rust stable
+              uses: deep-soft/rust-toolchain@master
+              with:
+                  target: x86_64-pc-windows-msvc
+                  toolchain: ${{ env.WIN_RUST_VERSION }}
+
+            - name: Install frontend dependencies
+              working-directory: ./desktop
+              run: |
+                bun install
+
+            # Run pre build
+            - name: Run pre_build.js on ${{ matrix.platform }}
+              run: |
+                bun scripts/pre_build.js ${{ matrix.pre-build-args }}
+
+            - name: Import Windows certificate
+              if: matrix.platform == 'windows-latest'
+              env:
+                WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+                WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+              run: |
+                # Import certificate
+                [IO.File]::WriteAllBytes('cert.pfx', [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+                Import-PfxCertificate -Exportable -FilePath "cert.pfx" -CertStoreLocation 'cert:\CurrentUser\My' -Password (ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText)
+
+                # Sign resources
+                $signtoolPath = (Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\" -Filter "signtool.exe" -Recurse | Where-Object FullName -like "*\x64\signtool.exe" | Select-Object -First 1).FullName
+                &$signtoolPath sign /f cert.pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 desktop\src-tauri\ffmpeg\bin\x64\*
+
+                # Sign tauri plugin DLLs
+                # TODO: remove once https://github.com/tauri-apps/tauri/pull/11676 merged
+                C:\msys64\usr\bin\wget.exe https://github.com/tauri-apps/binary-releases/releases/download/nsis-3/nsis-3.zip
+                Expand-Archive nsis-3.zip
+                Move-Item nsis-3\nsis-3.08 "$env:localappdata\tauri\NSIS"
+                Get-ChildItem -Path "$env:LOCALAPPDATA\tauri\NSIS\Plugins" -Filter '*.dll' -Recurse | ForEach-Object { 
+                  &$signtoolPath sign /f cert.pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $_.FullName
+                }
+
+            - name: Build
+              continue-on-error: true
+              #uses: deep-soft/tauri-action@v0
+              uses: deep-soft/tauri-action@dev
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAURI_SIGNING_PRIVATE_KEY:          '${{ secrets.TAURI_PRIVATE_KEY }}'
+                  TAURI_PRIVATE_KEY:                  '${{ secrets.TAURI_PRIVATE_KEY }}'
+                  WINDOWS_CERTIFICATE:                '${{ secrets.WINDOWS_CERTIFICATE }}'
+                  WINDOWS_CERTIFICATE_PASSWORD:       '${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}'
+                  #TAURI_SIGNING_PRIVATE_KEY_PASSWORD: '${{ secrets.TAURI_KEY_PASSWORD }}'
+                  #TAURI_PRIVATE_KEY_PASSWORD:         '${{ secrets.TAURI_KEY_PASSWORD }}'
+              with:
+                  tagName:     v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
+                  releaseName: "v__VERSION__"
+                  # releaseBody: "What's new?"
+                  # releaseBody: "${{ env.TAG_NAME }}-${{ env.TAG_BUILD }}"
+                  releaseBody: "${{ env.TAG_NAME }}-${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}"
+                  prerelease:  true
+                  # args:        ${{ matrix.args_verbose }}
+                  args:        ${{ matrix.args }}
+                  projectPath: "./desktop"
+                  tauriScript: bunx tauri
+
+# zip release begin
+            - name: Prepare to Publish
+              if: ${{ contains(matrix.platform, 'windows-latest') }}
+              continue-on-error: true
+              shell: bash
+              run: |
+                mkdir ./SignOutput/;
+                mkdir ./SignOutput/locales;
+                #v1
+                #cp $(find -L $EXE_FOLDER/* -name "vibe*.exe") ./SignOutput/ || true;
+                #cp $(find -L $EXE_FOLDER/* -name "ff*.exe" )  ./SignOutput/ || true;
+                #cp $(find -L $EXE_FOLDER/* -name "*.dll")     ./SignOutput/ || true;
+                #cp -R $EXE_FOLDER/locales/                    ./SignOutput/ || true;
+                #v2
+                cp $(find -L $EXE_FOLDER/* -name "ff*.exe" )  ./SignOutput/ || true;
+                cp $(find -L $EXE_FOLDER/* -name "*.dll")     ./SignOutput/ || true;
+                cp $EXE_FOLDER/vibe*.exe   ./SignOutput/ || true;
+                cp -R $EXE_FOLDER/locales/ ./SignOutput/ || true;
+                find ./SignOutput/ || true;
+
+            - name: Create Archive 
+              if: ${{ contains(matrix.platform, 'windows-latest') }}
+              continue-on-error: true
+              id: zip_archive
+              uses: deep-soft/zip-release@v5
+              with:
+                type: '7z'
+                filename: '${{ env.PROG_NAME }}-${{ env.PROG_VERSION }}-${{ env.TAG_BUILD }}-${{ matrix.cpu }}'
+                directory: './SignOutput'
+                path: 'vibe*.exe'
+                inclusions: 'ff*.exe *.dll locales/*'
+                exclusions: 'WebView2Loader.dll *.git* /*node_modules/* .editorconfig'
+                volume_size: '2g'
+                env_variable: 'ZIP_ARCHIVE' # archive name was ${{ env.ZIP_RELEASE_ARCHIVE }}
+                verbose: yes
+
+            - name: Publish Archive
+              if: ${{ contains(matrix.platform, 'windows-latest') }}
+              continue-on-error: true
+              uses: deep-soft/action-gh-release@v2.1
+              with:
+                draft: true
+                tag_name: ${{ env.TAG_VERSION }}
+                filelist: ${{ steps.zip_archive.outputs.volumes_list_name }}
+                files: |
+                    ${{ env.ZIP_ARCHIVE }}
+                    ${{ env.WORK_DIR_OS }}/_version_.txt
+# zip release end
+
+# zip release ALL begin
+            - name: Create Archive ALL
+              id: zip_archive_all
+              if:  ${{ inputs.archive_ALL}}
+              uses: deep-soft/zip-release@v3
+              with:
+                type: '7z'
+                filename: '${{ env.TAG_NAME }}-${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}-${{ matrix.cpu }}-${{ matrix.platform }}-ALL'
+                directory: '.'
+                path: '.'
+                #exclusions: '*.git* /*node_modules/* .editorconfig'
+                exclusions: ''
+                volume_size: '2g'
+                env_variable: 'ZIP_ARCHIVE_ALL'
+                # archive name is ${{ env.ZIP_RELEASE_ARCHIVE }}
+      
+            - name: Publish Archive ALL
+              if:  ${{ inputs.archive_ALL}}
+              continue-on-error: true
+              uses: deep-soft/action-gh-release@v2.1
+              with:
+                draft: true
+                tag_name: ${{ env.TAG_NAME }}-${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}-ALL
+                filelist: ${{ steps.zip_archive_all.outputs.volumes_list_name }}
+                files: |
+                    ${{ env.ZIP_ARCHIVE_ALL }}
+                    ${{ env.WORK_DIR_OS }}/_version_.txt
+# zip release ALL end
