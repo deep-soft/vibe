@@ -25,10 +25,13 @@ on:
 #          - "v*"
 
 env:
-  TAG_NAME:  "vibe"
-  TAG_REF:   "0000000"
-  TAG_BUILD: "b"
-  EXE_FOLDER: "target/x86_64-pc-windows-msvc/release"
+  PROG_NAME:    "vibe"
+  PROG_VERSION: "1.0.0"
+  TAG_NAME:     "vibe"
+  TAG_VERSION:  "v1.0.0"
+  TAG_REF:      "0000000"
+  TAG_BUILD:    "b"
+  EXE_FOLDER:   "target/x86_64-pc-windows-msvc/release"
 
 jobs:
     publish-tauri:
@@ -39,14 +42,18 @@ jobs:
             matrix:
                 include:
 #                    - platform: "macos-latest" # for Arm based macs (M1 and above).
+#                      cpu: 'aarch64'
 #                      args: "--target aarch64-apple-darwin"
 #                    - platform: "macos-latest" # for Intel based macs.
+#                      cpu: 'x86_64'
 #                      args: "--target x86_64-apple-darwin"
                     - platform: "ubuntu-22.04" # Ubuntu 22.04 x86_64 (Works on 24.04 as well)
+                      cpu: 'x86_64'
                       args: '--features "vulkan"'
                       args_verbose: '--verbose --features "vulkan" -- --verbose'
                       pre-build-args: "--vulkan"
                     - platform: "windows-latest" # Windows x86_64
+                      cpu: 'x86_64'
                       args: '--target x86_64-pc-windows-msvc --features "vulkan"'
                       args_verbose: '--verbose --target x86_64-pc-windows-msvc --features "vulkan" -- --verbose'
                       pre-build-args: "--vulkan"
@@ -80,16 +87,18 @@ jobs:
                 #_revision_=$_ref_
                 _revision_=$TAG_BUILD-$_date_-$_ref_;
                 #
-                echo "TAG_REF=$_ref_" >> $GITHUB_ENV;
+                echo "VERSION=$_prog_version_" >> $GITHUB_ENV;
                 echo "TAG_VERSION=v$_prog_version_" >> $GITHUB_ENV;
+                echo "TAG_REF=$_ref_" >> $GITHUB_ENV;
                 echo "TAG_BUILD=$_revision_" >> $GITHUB_ENV;
 
             - name: Print Version
               shell: bash
               run: |
-                echo "VER: [${{ env.TAG_VERSION }}]";
-                echo "REF: [${{ env.TAG_REF     }}]";
-                echo "BLD: [${{ env.TAG_BUILD   }}]";
+                echo "VER: [${{ env.PROG_VERSION }}]";
+                echo "VER: [${{ env.TAG_VERSION  }}]";
+                echo "REF: [${{ env.TAG_REF      }}]";
+                echo "BLD: [${{ env.TAG_BUILD    }}]";
                 echo "WORK_DIR_OS=[${{ env.WORK_DIR_OS }}]";
                 echo "GITHUB_WORKSPACE=[$GITHUB_WORKSPACE]";
                 echo "${{ env.TAG_NAME }}-${{ env.TAG_BUILD }}" > ${{ env.WORK_DIR_OS }}/_version_.txt;
@@ -244,7 +253,7 @@ jobs:
               uses: deep-soft/zip-release@v5
               with:
                 type: '7z'
-                filename: '${{ env.TAG_NAME }}-${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}-${{ matrix.platform }}'
+                filename: '${{ env.PROG_NAME }}-${{ env.PROG_VERSION }}-${{ env.TAG_BUILD }}-${{ matrix.cpu }}'
                 directory: './SignOutput'
                 path: 'vibe*.exe'
                 inclusions: 'ff*.exe *.dll locales/*'
@@ -273,7 +282,7 @@ jobs:
               uses: deep-soft/zip-release@v3
               with:
                 type: '7z'
-                filename: '${{ env.TAG_NAME }}-${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}-${{ matrix.platform }}-ALL'
+                filename: '${{ env.TAG_NAME }}-${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}-${{ matrix.cpu }}-${{ matrix.platform }}-ALL'
                 directory: '.'
                 path: '.'
                 #exclusions: '*.git* /*node_modules/* .editorconfig'
