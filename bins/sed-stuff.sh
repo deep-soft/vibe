@@ -51,6 +51,7 @@ if [[ -f "$file_in" ]]; then
     if [[ "$_fil_" != "" ]]; then
       if [[ -f "$_fil_" ]]; then
         ((countf++));
+		echo_debug "# "$countf;
         echo_debug "sed -i \"s|$_str_|$_rpl_|\" $_fil_";
         _str_s_=$(grep -Pzo "$_str_" "$_fil_");
         echo_debug_2 "CNTF:$countf:$_str_s_";
@@ -73,6 +74,7 @@ if [[ -f "$file_in" ]]; then
       _str_="";
       _rpl_="";
       _fil_="";
+	  echo_debug " ";
     fi;
     # status=$(echo "[CNT:$count, CNTF:$countf]");
   done;
