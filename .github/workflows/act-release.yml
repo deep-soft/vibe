@@ -1,4 +1,4 @@
-# 2025-01-05 12:50
+# 2025-01-05 18:00
 # act-release.yml
 name: act-release
 
@@ -106,6 +106,37 @@ jobs:
                 bash bins/sed-stuff.sh "_" "${{ inputs.SED_STUFF_PARAMS }}";
 # sed-stuff end
 
+#patch begin
+            - name: Prepare for patch 1
+              continue-on-error: false
+              shell: bash
+              run: |
+                cp ./bins/VIBE_O_SH_PRE.sh ./VIBE_O_SH_PRE.sh;
+                cp ./bins/VIBE_O_SH.sh     ./VIBE_O_SH.sh;
+                cp ./bins/VIBE_O_HL.txt    ./VIBE_O_HL.txt;
+                echo prepatch 1 run;
+                bash ./VIBE_O_SH_PRE.sh;
+                echo Done prepatch 1;
+                if [ "${{ env.DEBUG_LS }}" = "yes" ]; then
+                  ls -l;
+                  pwd;
+                fi
+
+            - name: Apply patch 1
+              # continue-on-error: true
+              shell: bash
+              env: 
+                SED_EXE: ${{ env.SED_EXE }}
+              run: |
+                echo patch 1 run_1;
+                bash ./VIBE_O_SH.sh;
+                echo patch 1 run_2;
+                bash ./VIBE_O_SH.sh;
+                echo patch 1 run_3;
+                bash ./VIBE_O_SH.sh;
+                echo Done patch 1
+#patch end
+
             - name: setup Bun
               uses: deep-soft/setup-bun@v1
 
@@ -137,6 +168,29 @@ jobs:
               run: |
                 bun scripts/pre_build.js ${{ matrix.pre-build-args }}
 
+            - name: Import Windows certificate
+              if: matrix.platform == 'windows-latest'
+              env:
+                WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+                WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+              run: |
+                # Import certificate
+                [IO.File]::WriteAllBytes('cert.pfx', [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+                Import-PfxCertificate -Exportable -FilePath "cert.pfx" -CertStoreLocation 'cert:\CurrentUser\My' -Password (ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText)
+
+                # Sign resources
+                $signtoolPath = (Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\" -Filter "signtool.exe" -Recurse | Where-Object FullName -like "*\x64\signtool.exe" | Select-Object -First 1).FullName
+                &$signtoolPath sign /f cert.pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 desktop\src-tauri\ffmpeg\bin\x64\*
+
+                # Sign tauri plugin DLLs
+                # TODO: remove once https://github.com/tauri-apps/tauri/pull/11676 merged
+                C:\msys64\usr\bin\wget.exe https://github.com/tauri-apps/binary-releases/releases/download/nsis-3/nsis-3.zip
+                Expand-Archive nsis-3.zip
+                Move-Item nsis-3\nsis-3.08 "$env:localappdata\tauri\NSIS"
+                Get-ChildItem -Path "$env:LOCALAPPDATA\tauri\NSIS\Plugins" -Filter '*.dll' -Recurse | ForEach-Object { 
+                  &$signtoolPath sign /f cert.pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $_.FullName
+                }
+
             - name: Build
               continue-on-error: true
               uses: deep-soft/tauri-action@v0
@@ -149,7 +203,8 @@ jobs:
               with:
                   tagName:     v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
                   releaseName: "v__VERSION__"
-                  releaseBody: "What's new? 🎉📣"
+                  # releaseBody: "What's new?"
+                  releaseBody: "${{ env.TAG_NAME }}-${{ env.TAG_BUILD }}"
                   prerelease:  true
                   args:        ${{ matrix.args }}
                   projectPath: "./desktop"
