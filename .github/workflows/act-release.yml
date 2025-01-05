@@ -28,7 +28,7 @@ env:
   TAG_NAME:  "vibe"
   TAG_REF:   "0000000"
   TAG_BUILD: "-b"
-  EXE_FOLDER: "target/x86_64-pc-windows-msvc"
+  EXE_FOLDER: "target/x86_64-pc-windows-msvc/release"
 
 jobs:
     publish-tauri:
@@ -79,7 +79,7 @@ jobs:
                 _revision_=$TAG_BUILD-$_date_-$_ref_;
                 #
                 echo "TAG_REF=$_ref_" >> $GITHUB_ENV;
-                echo "TAG_VERSION=$_prog_version_" >> $GITHUB_ENV;
+                echo "TAG_VERSION=v$_prog_version_" >> $GITHUB_ENV;
                 echo "TAG_BUILD=$_revision_" >> $GITHUB_ENV;
 
             - name: Print Version
@@ -216,9 +216,13 @@ jobs:
               continue-on-error: true
               shell: bash
               run: |
-                mkdir ./SignOutput/
-                cp $(find -L $EXE_FOLDER/* -name "*.exe") ./SignOutput/ || true;
-                ls -la ./SignOutput/ || true;
+                mkdir ./SignOutput/;
+                mkdir ./SignOutput/locales;
+                cp $(find -L $EXE_FOLDER/* -name "vibe*.exe") ./SignOutput/ || true;
+                cp $(find -L $EXE_FOLDER/* -name "ff*.exe")   ./SignOutput/ || true;
+                cp $(find -L $EXE_FOLDER/* -name "*.dll")     ./SignOutput/ || true;
+                cp -R $EXE_FOLDER/locales/                    ./SignOutput/locales/ || true;
+                find ./SignOutput/ || true;
 
             - name: Create Archive 
               if: ${{ contains(matrix.platform, 'windows-latest') }}
@@ -227,9 +231,10 @@ jobs:
               uses: deep-soft/zip-release@v5
               with:
                 type: '7z'
-                filename: '${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}-${{ matrix.platform }}'
+                filename: '${{ env.TAG_NAME }}-${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}-${{ matrix.platform }}'
                 directory: './SignOutput'
-                path: '.'
+                path: 'vibe*.exe'
+                inclusions: 'ff*.exe *.dll locales/*'
                 exclusions: '*.git* /*node_modules/* .editorconfig'
                 volume_size: '2g'
                 env_variable: 'ZIP_ARCHIVE' # archive name was ${{ env.ZIP_RELEASE_ARCHIVE }}
@@ -255,7 +260,7 @@ jobs:
               uses: deep-soft/zip-release@v3
               with:
                 type: '7z'
-                filename: '${{ env.TAG_VERSION }}${{ env.TAG_BUILD }}-${{ matrix.platform }}-ALL'
+                filename: '${{ env.TAG_NAME }}-${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}-${{ matrix.platform }}-ALL'
                 directory: '.'
                 path: '.'
                 exclusions: '*.git* /*node_modules/* .editorconfig'
@@ -269,7 +274,7 @@ jobs:
               uses: deep-soft/action-gh-release@v2.1
               with:
                 draft: true
-                tag_name: ${{ env.TAG_VERSION }}${{ env.TAG_BUILD }}-ALL
+                tag_name: ${{ env.TAG_NAME }}-${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}-ALL
                 filelist: ${{ steps.zip_archive_all.outputs.volumes_list_name }}
                 files: |
                     ${{ env.ZIP_ARCHIVE_ALL }}
