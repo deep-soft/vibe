@@ -221,10 +221,16 @@ jobs:
               run: |
                 mkdir ./SignOutput/;
                 mkdir ./SignOutput/locales;
-                cp $(find -L $EXE_FOLDER/* -name "vibe*.exe") ./SignOutput/ || true;
-                cp $(find -L $EXE_FOLDER/* -name "ff*.exe")   ./SignOutput/ || true;
-                cp $(find -L $EXE_FOLDER/* -name "*.dll")     ./SignOutput/ || true;
-                cp -R $EXE_FOLDER/locales/                    ./SignOutput/locales/ || true;
+                #v1
+                #cp $(find -L $EXE_FOLDER/* -name "vibe*.exe") ./SignOutput/ || true;
+                #cp $(find -L $EXE_FOLDER/* -name "ff*.exe" )  ./SignOutput/ || true;
+                #cp $(find -L $EXE_FOLDER/* -name "*.dll")     ./SignOutput/ || true;
+                #cp -R $EXE_FOLDER/locales/                    ./SignOutput/ || true;
+                #v2
+                cp $EXE_FOLDER/vibe*.exe   ./SignOutput/ || true;
+                cp $EXE_FOLDER/ff*.exe"    ./SignOutput/ || true;
+                cp $EXE_FOLDER/*.dll"      ./SignOutput/ || true;
+                cp -R $EXE_FOLDER/locales/ ./SignOutput/ || true;
                 find ./SignOutput/ || true;
 
             - name: Create Archive 
