@@ -8,16 +8,16 @@ on:
       SED_STUFF:
         description: SED_STUFF
         type: boolean
-        default: false
-        required: true
-      DEBUG_MODE:
-        description: DEBUG_MODE
-        default: "Y"
+        default: true
         required: true
       archive_ALL:
         description: Archive ALL
         type: boolean
         default: false
+        required: true
+      DEBUG_MODE:
+        description: DEBUG_MODE
+        default: "Y"
         required: true
 
 #  push:
