@@ -45,7 +45,6 @@ if [[ -f "$file_in" ]]; then
   cat $file_in | while read -r the_line
   do
     ((count++));
-    echo_debug_1 "#! "$countf;
     if [[ ${the_line:0:2} == "S:" ]]; then _str_=$(echo "${the_line:2}" | tr -d "\r"); echo_debug_1 "str:[$_str_]"; fi;
     if [[ ${the_line:0:2} == "R:" ]]; then _rpl_=$(echo "${the_line:2}" | tr -d "\r"); echo_debug_1 "rpl:[$_rpl_]"; fi;
     if [[ ${the_line:0:2} == "F:" ]]; then _fil_=$(echo "${the_line:2}" | tr -d "\r"); echo_debug_1 "fil:[$_fil_]"; fi;
@@ -64,7 +63,7 @@ if [[ -f "$file_in" ]]; then
         else
           echo "NOTOK: [CNT:$count, CNTF:$countf]";
         fi;
-        if [[ "$debug_mode" == "Y" ]]; then
+        if [[ "$debug_mode_1" == "Y" ]]; then
           echo "grep 1";
           if [[ "$_str_" != "" ]]; then grep "$_str_" "$_fil_"; else echo ""; fi
           echo "grep 2";
