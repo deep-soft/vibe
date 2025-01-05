@@ -43,7 +43,18 @@ do
   printf '\r\n#(_%s_)\r\n' $to_search;
   ((all_count++));
 #  f_found=$(grep -rl --exclude-dir=.git --exclude=Cargo.* --exclude=*.lock --exclude=*.sh --exclude=*.sr $to_search . | tr '\r' ' ' | tr '\n' ' ')
-  f_found=$(grep -rl --exclude-dir=.git --exclude=Cargo.* --exclude=*.lock --exclude=$rrules_in --exclude=$rrules $to_search . | tr '\r' ' ' | tr '\n' ' ');
+#  f_found=$(grep -rl --exclude-dir=.git --exclude=Cargo.* --exclude=*.lock --exclude=$rrules_in --exclude=$rrules $to_search . | tr '\r' ' ' | tr '\n' ' ');
+  f_found=$(grep -rl \
+    --exclude-dir=.git \
+    --exclude=Cargo.* \
+    --exclude=*.lock \
+    --exclude=*.pdf \
+    --exclude=LICENSE \
+    --exclude=$rrules_in \
+    --exclude=$rrules \
+    $to_search . \
+	| tr '\r' ' ' | tr '\n' ' ');
+
   if [ ${#f_found} -ge 2 ]; then
 #  if [[ ! $f_found == '' ]]; then
     $SED_EXE -i -f $rrules $f_found;
