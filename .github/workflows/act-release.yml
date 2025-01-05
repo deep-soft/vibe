@@ -27,7 +27,7 @@ on:
 env:
   TAG_NAME:  "vibe"
   TAG_REF:   "0000000"
-  TAG_BUILD: "-b"
+  TAG_BUILD: "b"
   EXE_FOLDER: "target/x86_64-pc-windows-msvc/release"
 
 jobs:
@@ -43,10 +43,12 @@ jobs:
 #                    - platform: "macos-latest" # for Intel based macs.
 #                      args: "--target x86_64-apple-darwin"
                     - platform: "ubuntu-22.04" # Ubuntu 22.04 x86_64 (Works on 24.04 as well)
-                      args: '--verbose --features "vulkan" -- --verbose'
+                      args: '--features "vulkan"'
+                      args_verbose: '--verbose --features "vulkan" -- --verbose'
                       pre-build-args: "--vulkan"
                     - platform: "windows-latest" # Windows x86_64
-                      args: '--verbose --target x86_64-pc-windows-msvc --features "vulkan" -- --verbose'
+                      args: '--target x86_64-pc-windows-msvc --features "vulkan"'
+                      args_verbose: '--verbose --target x86_64-pc-windows-msvc --features "vulkan" -- --verbose'
                       pre-build-args: "--vulkan"
 
         runs-on: ${{ matrix.platform }}
@@ -198,17 +200,19 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   TAURI_SIGNING_PRIVATE_KEY:          '${{ secrets.TAURI_PRIVATE_KEY }}'
-                  #TAURI_SIGNING_PRIVATE_KEY_PASSWORD: '${{ secrets.TAURI_KEY_PASSWORD }}'
                   TAURI_PRIVATE_KEY:                  '${{ secrets.TAURI_PRIVATE_KEY }}'
-                  #TAURI_PRIVATE_KEY_PASSWORD:         '${{ secrets.TAURI_KEY_PASSWORD }}'
                   WINDOWS_CERTIFICATE:                '${{ secrets.WINDOWS_CERTIFICATE }}'
                   WINDOWS_CERTIFICATE_PASSWORD:       '${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}'
+                  #TAURI_SIGNING_PRIVATE_KEY_PASSWORD: '${{ secrets.TAURI_KEY_PASSWORD }}'
+                  #TAURI_PRIVATE_KEY_PASSWORD:         '${{ secrets.TAURI_KEY_PASSWORD }}'
               with:
                   tagName:     v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
                   releaseName: "v__VERSION__"
                   # releaseBody: "What's new?"
-                  releaseBody: "${{ env.TAG_NAME }}-${{ env.TAG_BUILD }}"
+                  # releaseBody: "${{ env.TAG_NAME }}-${{ env.TAG_BUILD }}"
+                  releaseBody: "${{ env.TAG_NAME }}-${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}"
                   prerelease:  true
+                  # args:        ${{ matrix.args_verbose }}
                   args:        ${{ matrix.args }}
                   projectPath: "./desktop"
                   tauriScript: bunx tauri
@@ -227,9 +231,9 @@ jobs:
                 #cp $(find -L $EXE_FOLDER/* -name "*.dll")     ./SignOutput/ || true;
                 #cp -R $EXE_FOLDER/locales/                    ./SignOutput/ || true;
                 #v2
+                cp $(find -L $EXE_FOLDER/* -name "ff*.exe" )  ./SignOutput/ || true;
+                cp $(find -L $EXE_FOLDER/* -name "*.dll")     ./SignOutput/ || true;
                 cp $EXE_FOLDER/vibe*.exe   ./SignOutput/ || true;
-                cp $EXE_FOLDER/ff*.exe"    ./SignOutput/ || true;
-                cp $EXE_FOLDER/*.dll"      ./SignOutput/ || true;
                 cp -R $EXE_FOLDER/locales/ ./SignOutput/ || true;
                 find ./SignOutput/ || true;
 
@@ -244,7 +248,7 @@ jobs:
                 directory: './SignOutput'
                 path: 'vibe*.exe'
                 inclusions: 'ff*.exe *.dll locales/*'
-                exclusions: '*.git* /*node_modules/* .editorconfig'
+                exclusions: 'WebView2Loader.dll *.git* /*node_modules/* .editorconfig'
                 volume_size: '2g'
                 env_variable: 'ZIP_ARCHIVE' # archive name was ${{ env.ZIP_RELEASE_ARCHIVE }}
                 verbose: yes
@@ -272,7 +276,8 @@ jobs:
                 filename: '${{ env.TAG_NAME }}-${{ env.TAG_VERSION }}-${{ env.TAG_BUILD }}-${{ matrix.platform }}-ALL'
                 directory: '.'
                 path: '.'
-                exclusions: '*.git* /*node_modules/* .editorconfig'
+                #exclusions: '*.git* /*node_modules/* .editorconfig'
+                exclusions: ''
                 volume_size: '2g'
                 env_variable: 'ZIP_ARCHIVE_ALL'
                 # archive name is ${{ env.ZIP_RELEASE_ARCHIVE }}
