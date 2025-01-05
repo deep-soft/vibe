@@ -104,7 +104,7 @@ jobs:
                 DEBUG_MODE_1: ${{ inputs.DEBUG_MODE }}
                 DEBUG_MODE_2: ${{ inputs.DEBUG_MODE }}
               run: |
-                bash bins/sed-stuff.sh "_" "${{ inputs.SED_STUFF_PARAMS }}";
+                bash bins/sed-stuff.sh "bins/sed-stuff-win7.txt" "${{ inputs.SED_STUFF_PARAMS }}";
 # sed-stuff end
 
 #patch begin
@@ -149,6 +149,10 @@ jobs:
               with:
                   target: x86_64-pc-windows-msvc
                   toolchain: ${{ env.WIN_RUST_VERSION }}
+
+            - name: cargo update
+              run: |
+                cargo update
 
             - name: Install frontend dependencies
               working-directory: ./desktop
