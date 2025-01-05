@@ -8,7 +8,7 @@ on:
       SED_STUFF:
         description: SED_STUFF
         type: boolean
-        default: false
+        default: true
         required: true
       DEBUG_MODE:
         description: DEBUG_MODE
