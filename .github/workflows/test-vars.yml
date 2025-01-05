@@ -1,4 +1,4 @@
-# 2025-01-05 11:35
+# 2025-01-05 11:50
 # test-vars.yml
 name: test-vars
 
@@ -31,6 +31,9 @@ jobs:
 #
         runs-on: ${{ matrix.platform }}
         steps:
+#0
+            - name: Checkout
+              uses: deep-soft/checkout@v4
 #1
             - name: test one
               env:
@@ -49,14 +52,14 @@ jobs:
             - name: setup Bun
               uses: deep-soft/setup-bun@v1
 #
-            - name: Bun init
-              run: |
-                bun init
+#            - name: Bun init
+#              run: |
+#                bun init
 #
             - name: Install frontend dependencies
               run: |
                 bun install
-              # working-directory: ./
+              working-directory: ./desktop
 #
             - name: test two
               continue-on-error: true
@@ -66,8 +69,8 @@ jobs:
                   TAURI_SIGNING_PRIVATE_KEY:          ${{ secrets.TAURI_PRIVATE_KEY  }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
               with:
-                  # projectPath: "./
-                  args: 'signer generate -w test_vark.tx'
+                  projectPath: "./desktop"
+                  args: 'signer generate -w ../test_vark.tx'
                   tauriScript: bunx tauri
 #3
             - name: upload result
@@ -80,4 +83,4 @@ jobs:
                   test_vark.tx
 #
 
-# ----------------------------------------
+# -- end ---
