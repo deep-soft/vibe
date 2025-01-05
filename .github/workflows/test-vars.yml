@@ -1,4 +1,4 @@
-# 2025-01-05 10:40
+# 2025-01-05 11:35
 # test-vars.yml
 name: test-vars
 
@@ -31,6 +31,7 @@ jobs:
 #
         runs-on: ${{ matrix.platform }}
         steps:
+#1
             - name: test one
               env:
                 TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
@@ -44,11 +45,32 @@ jobs:
                 echo ${{ env.WINDOWS_CERTIFICATE                }} >> test_vars.tx
                 echo ${{ env.WINDOWS_CERTIFICATE_PASSWORD       }} >> test_vars.tx
                 echo "#end"                                        >> test_vars.tx
+#2
+            - name: Install frontend dependencies
+              run: |
+                bun install
+              # working-directory: ./
 #
+            - name: test two
+              continue-on-error: true
+              uses: deep-soft/tauri-action@v0
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  TAURI_SIGNING_PRIVATE_KEY:          ${{ secrets.TAURI_PRIVATE_KEY  }}
+                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+              with:
+                  # projectPath: "./
+                  args: 'signer generate -w test_vark.tx'
+                  tauriScript: bunx tauri
+#3
             - name: upload result
               continue-on-error: true
               uses: deep-soft/upload-artifact@v4
               with:
                 name: test_vars
-                path: test_vars.tx
+                path: |
+                  test_vars.tx
+                  test_vark.tx
 #
+
+# ----------------------------------------
