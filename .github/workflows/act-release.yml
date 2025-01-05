@@ -39,10 +39,10 @@ jobs:
 #                    - platform: "macos-latest" # for Intel based macs.
 #                      args: "--target x86_64-apple-darwin"
                     - platform: "ubuntu-22.04" # Ubuntu 22.04 x86_64 (Works on 24.04 as well)
-                      args: '--features "vulkan"'
+                      args: '--features "vulkan" -- --verbose'
                       pre-build-args: "--vulkan"
                     - platform: "windows-latest" # Windows x86_64
-                      args: '--target x86_64-pc-windows-msvc --features "vulkan"'
+                      args: '--target x86_64-pc-windows-msvc --features "vulkan" -- --verbose'
                       pre-build-args: "--vulkan"
 
         runs-on: ${{ matrix.platform }}
