@@ -1,4 +1,4 @@
-# 2025-01-05 12:00
+# 2025-01-05 19:30
 # test-vars.yml
 name: test-vars
 
@@ -37,10 +37,10 @@ jobs:
 #1
             - name: test one
               env:
-                TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-                TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-                WINDOWS_CERTIFICATE: '${{ secrets.WINDOWS_CERTIFICATE }}'
-                WINDOWS_CERTIFICATE_PASSWORD: '${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}'
+                TAURI_SIGNING_PRIVATE_KEY:          '${{ secrets.TAURI_PRIVATE_KEY }}'
+                TAURI_SIGNING_PRIVATE_KEY_PASSWORD: '${{ secrets.TAURI_KEY_PASSWORD }}'
+                WINDOWS_CERTIFICATE:                '${{ secrets.WINDOWS_CERTIFICATE }}'
+                WINDOWS_CERTIFICATE_PASSWORD:       '${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}'
               run: |
                 echo "#begin"                                       > test_vars.tx
                 echo ${{ env.TAURI_SIGNING_PRIVATE_KEY          }} >> test_vars.tx
@@ -70,9 +70,9 @@ jobs:
               continue-on-error: true
               uses: deep-soft/tauri-action@v0
               env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  TAURI_SIGNING_PRIVATE_KEY:          ${{ secrets.TAURI_PRIVATE_KEY  }}
-                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+                  GITHUB_TOKEN:                       '${{ secrets.GITHUB_TOKEN }}'
+                  TAURI_SIGNING_PRIVATE_KEY:          '${{ secrets.TAURI_PRIVATE_KEY  }}'
+                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: '${{ secrets.TAURI_KEY_PASSWORD }}'
               with:
                   projectPath: "./desktop"
                   args: 'signer generate -w ../test_vark.tx'
