@@ -5,19 +5,19 @@
 #DEBUG_MODE_2=Y;
 
 FILE_TO_CAT="$2";
-debug_mode="$DEBUG_MODE_1";
+debug_mode_1="$DEBUG_MODE_1";
 debug_mode_2="$DEBUG_MODE_2";
 
-if [[ "$debug_mode" == "" ]]; then
-  debug_mode="N";
+if [[ "$debug_mode_1" == "" ]]; then
+  debug_mode_1="N";
 fi
 
 if [[ "$debug_mode_2" == "" ]]; then
   debug_mode_2="N";
 fi
 
-echo_debug () {
-if [[ "$debug_mode" == "Y" ]]; then
+echo_debug_1 () {
+if [[ "$debug_mode_1" == "Y" ]]; then
   echo "$1";
 fi;
 }
@@ -45,15 +45,17 @@ if [[ -f "$file_in" ]]; then
   cat $file_in | while read -r the_line
   do
     ((count++));
-    if [[ ${the_line:0:2} == "S:" ]]; then _str_=$(echo "${the_line:2}" | tr -d "\r"); echo_debug "str:[$_str_]"; fi;
-    if [[ ${the_line:0:2} == "R:" ]]; then _rpl_=$(echo "${the_line:2}" | tr -d "\r"); echo_debug "rpl:[$_rpl_]"; fi;
-    if [[ ${the_line:0:2} == "F:" ]]; then _fil_=$(echo "${the_line:2}" | tr -d "\r"); echo_debug "fil:[$_fil_]"; fi;
+    echo_debug_1 "#! "$countf;
+    if [[ ${the_line:0:2} == "S:" ]]; then _str_=$(echo "${the_line:2}" | tr -d "\r"); echo_debug_1 "str:[$_str_]"; fi;
+    if [[ ${the_line:0:2} == "R:" ]]; then _rpl_=$(echo "${the_line:2}" | tr -d "\r"); echo_debug_1 "rpl:[$_rpl_]"; fi;
+    if [[ ${the_line:0:2} == "F:" ]]; then _fil_=$(echo "${the_line:2}" | tr -d "\r"); echo_debug_1 "fil:[$_fil_]"; fi;
     if [[ "$_fil_" != "" ]]; then
       if [[ -f "$_fil_" ]]; then
         ((countf++));
-		echo_debug "# "$countf;
-        echo_debug "sed -i \"s|$_str_|$_rpl_|\" $_fil_";
-        _str_s_=$(grep -Pzo "$_str_" "$_fil_");
+        echo_debug_1 "## "$countf;
+        echo_debug_1 "sed -i \"s|$_str_|$_rpl_|\" $_fil_";
+        #_str_s_=$(grep -Pzo "$_str_" "$_fil_");
+		_str_s_=$(grep "$_str_" "$_fil_");
         echo_debug_2 "CNTF:$countf:$_str_s_";
         sed -i -r "s|$_str_|$_rpl_|" $_fil_;
         _str_r_=$(grep "$_rpl_" "$_fil_");
@@ -64,9 +66,9 @@ if [[ -f "$file_in" ]]; then
         fi;
         if [[ "$debug_mode" == "Y" ]]; then
           echo "grep 1";
-          if [[ "$_str_" != "" ]]; then grep -Pzo "$_str_" "$_fil_"; else echo ""; fi
+          if [[ "$_str_" != "" ]]; then grep "$_str_" "$_fil_"; else echo ""; fi
           echo "grep 2";
-          if [[ "$_rpl_" != "" ]]; then grep -Pzo "$_rpl_" "$_fil_"; else echo ""; fi
+          if [[ "$_rpl_" != "" ]]; then grep "$_rpl_" "$_fil_"; else echo ""; fi
         fi;
       else
         echo "not_found: [$_fil_]";
@@ -74,11 +76,11 @@ if [[ -f "$file_in" ]]; then
       _str_="";
       _rpl_="";
       _fil_="";
-	  echo_debug " ";
+      echo_debug_1 " ";
     fi;
     # status=$(echo "[CNT:$count, CNTF:$countf]");
   done;
-  if [[ "$debug_mode" == "Y" ]]; then
+  if [[ "$debug_mode_1" == "Y" ]]; then
     if [[ "$FILE_TO_CAT" != "" ]]; then
       echo " [[ $FILE_TO_CAT : begin ]]";
       cat $FILE_TO_CAT;
