@@ -32,7 +32,8 @@ env:
   TAG_REF:      "0000000"
   TAG_BUILD:    "b"
   EXE_FOLDER:   "target/x86_64-pc-windows-msvc/release"
-  WIN_RUST_VERSION: "1.75"
+  WIN_RUST_VERSION: "1.77.2-msvc"
+#  WIN_RUST_VERSION: "1.75"
 
 jobs:
     publish-tauri:
@@ -157,9 +158,11 @@ jobs:
                 # echo "cargo update skip"
                 # echo cargo update tauri-plugin-http@2.0.3 --precise ver
                 # cargo update tauri-plugin-http@2.0.3 --precise ver
-                cargo update -p cargo-metadata --precise 0.19.0
-                cargo update cargo-platform@0.1.9 --precise 0.1.8
-                cargo update cargo_metadata@0.19.2 --precise 0.19.0 
+                # cargo update -p cargo_metadata --precise 0.19.0
+                # cargo update cargo-platform@0.1.9 --precise 0.1.8
+                # cargo update cargo_metadata@0.19.2 --precise 0.19.0 
+                cargo update -p cargo_metadata --precise 0.19.0
+                cargo update -p cargo-platform --precise 0.1.8
 
             - name: Install frontend dependencies
               working-directory: ./desktop
