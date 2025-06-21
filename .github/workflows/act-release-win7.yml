@@ -32,8 +32,8 @@ env:
   TAG_REF:      "0000000"
   TAG_BUILD:    "b"
   EXE_FOLDER:   "target/x86_64-pc-windows-msvc/release"
-  WIN_RUST_VERSION: "1.77.2-msvc"
-#  WIN_RUST_VERSION: "1.75"
+  WIN_RUST_VERSION: "1.75"
+  #WIN_RUST_VERSION: "1.77.2-msvc"
 
 jobs:
     publish-tauri:
