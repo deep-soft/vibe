@@ -154,6 +154,7 @@ jobs:
             - name: cargo update
               shell: bash
               run: |
+                echo "cargo update skip"
                 # cargo update
                 # cargo update jsonptr@0.4.7 --precise ver
                 # echo "cargo update skip"
@@ -165,7 +166,7 @@ jobs:
                 #cargo update -p cargo_metadata --precise 0.19.0
                 #cargo update -p cargo-platform --precise 0.1.8
                 #mv cargo.lock cargo.lcko
-                cargo update tauri-plugin-http@2.0.3 --precise 2.0.0-rc.6
+                #cargo update tauri-plugin-http@2.0.3 --precise 2.0.0-rc.6
 
             - name: Install frontend dependencies
               working-directory: ./desktop
