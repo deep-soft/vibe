@@ -1,4 +1,4 @@
-use crate::config::{DEAFULT_MODEL_FILENAME, DEFAULT_MODEL_URLS, STORE_FILENAME};
+use crate::config::STORE_FILENAME;
 use crate::setup::ModelContext;
 use crate::utils::{get_current_dir, LogError};
 use eyre::{bail, eyre, Context, ContextCompat, OptionExt, Result};
@@ -84,17 +84,9 @@ pub fn get_x86_features() -> Option<Value> {
     }
 }
 #[tauri::command]
-pub async fn download_model(app_handle: tauri::AppHandle, url: Option<String>) -> Result<String> {
-    let model_path = if let Some(url) = url.clone() {
-        let filename = vibe_core::downloader::get_filename(&url).await?;
-        tracing::debug!("url filename is {}", filename);
-        get_models_folder(app_handle.clone())?.join(filename)
-    } else {
-        get_models_folder(app_handle.clone())?.join(DEAFULT_MODEL_FILENAME)
-    };
-
+pub async fn download_model(app_handle: tauri::AppHandle, url: String, path: String) -> Result<String> {
     let mut downloader = vibe_core::downloader::Downloader::new();
-    tracing::debug!("Download model invoked! with path {}", model_path.display());
+    tracing::debug!("Download model invoked! with path {}", path);
 
     let abort_atomic = Arc::new(AtomicBool::new(false));
     let abort_atomic_c = abort_atomic.clone();
@@ -133,33 +125,11 @@ pub async fn download_model(app_handle: tauri::AppHandle, url: Option<String>) -
         }
     };
 
-    if let Some(url) = url {
-        downloader
-            .download(&url, model_path.to_owned(), download_progress_callback)
-            .await?;
-        set_progress_bar(&app_handle_c, None)?;
-        Ok(model_path.to_str().context("to_str")?.to_string())
-    } else {
-        let mut errors = Vec::new();
-        for url in DEFAULT_MODEL_URLS {
-            tracing::debug!("Download default model from URL {}", url);
-            match downloader
-                .download(url, model_path.to_owned(), download_progress_callback.clone())
-                .await
-            {
-                Err(e) => errors.push(format!("Failed to download from {}: {}", url, e)),
-                _ => {
-                    set_progress_bar(&app_handle_c, None)?;
-                    return Ok(model_path.to_str().context("to_str")?.to_string());
-                }
-            }
-        }
-        bail!(
-            "Could not download any model file. Errors: {:?}\nTried from {:?}",
-            errors,
-            DEFAULT_MODEL_URLS.join(",")
-        );
-    }
+    downloader
+        .download(&url, path.clone().into(), download_progress_callback)
+        .await?;
+    set_progress_bar(&app_handle_c, None)?;
+    Ok(path.to_string())
 }
 
 #[tauri::command]
@@ -254,6 +224,39 @@ impl FfmpegOptions {
         }
         cmd
     }
+}
+
+#[tauri::command]
+pub async fn glob_files(folder: String, patterns: Vec<String>, recursive: bool) -> Vec<String> {
+    let mut files = Vec::new();
+
+    // Construct the search pattern based on the recursive flag
+    let search_pattern = if recursive {
+        format!("{}/**/*", folder) // Recursive search
+    } else {
+        format!("{}/*", folder) // Non-recursive search (only in the folder)
+    };
+
+    match glob::glob(&search_pattern) {
+        Ok(paths) => {
+            for entry in paths.filter_map(Result::ok) {
+                if entry.is_file() {
+                    if let Some(file_name) = entry.file_name().and_then(|n| n.to_str()) {
+                        if patterns.iter().any(|p| file_name.ends_with(p)) {
+                            if let Ok(path_str) = entry.into_os_string().into_string() {
+                                files.push(path_str);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("Failed to read pattern {}: {}", search_pattern, e);
+        }
+    }
+
+    files
 }
 
 #[tauri::command]

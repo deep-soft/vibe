@@ -32,26 +32,17 @@ For high accuracy and more computational resources, excels in complex scenarios.
 [👉 Magic Setup](https://tinyurl.com/3cn846h8)  
 [🔽 Direct Download](https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin?download=true)
 
-### 🚀 Distil Large Model (v3)
+### 🚀 Large v3 Turbo (Recommended)
 
-A highly optimized version of the large model, designed for English. It offers 2-3x faster performance compared to the standard large model while maintaining high accuracy.
+[👉 Magic Setup](https://tinyurl.com/yphwban5)  
+[🔽 Direct Download](https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin)
 
-[🔽 Direct Download](https://huggingface.co/distil-whisper/distil-large-v3-ggml/resolve/main/ggml-distil-large-v3.bin?download=true)
-
-### ✡️ Ivrit Model (v3 Trubo)
+### ✡️ Ivrit Model v3 Trubo (Recommended)
 
 Specialized for Hebrew (Ivrit) language data, optimized for high speed and accuracy in Hebrew tasks.
 
 [👉 Magic Setup](https://tinyurl.com/t9r3tyxk)  
 [🔽 Direct Download](https://huggingface.co/ivrit-ai/whisper-large-v3-turbo-ggml/resolve/main/ggml-model.bin?download=true)
-
-### ✡️ Ivrit Model (v2 d4)
-
-Specialized for Hebrew (Ivrit) language data, optimized for high accuracy in Hebrew tasks.
-
-[👉 Magic Setup](https://tinyurl.com/2c3bzj2b)  
-[🔽 Direct Download](https://huggingface.co/ivrit-ai/whisper-v2-d4-ggml/resolve/main/ggml-ivrit-v2-d4.bin?download=true)
-
 
 Enjoy exploring these models and enhancing your Vibe! 🌐✨
 
@@ -69,40 +60,27 @@ Find additional models here:
 <summary>Convert transformers to GGML</summary>
 
 ```console
-# Create folder for the process
-mkdir whisper
-cd whisper
+# Setup environment
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.bashrc
+uv venv
+uv pip install torch transformers huggingface_hub
+huggingface-cli login --token "token" # https://huggingface.co/settings/tokens
 
-# Install dependencies
-sudo apt-get install git-lfs python3.10-venv
-python3 -m venv venv
-source venv/bin/activate
-pip3 install torch torchvision torchaudio transformers
+# Convert and upload
+git clone https://github.com/openai/whisper
+git clone https://github.com/ggml-org/whisper.cpp
+git clone https://huggingface.co/ivrit-ai/whisper-large-v3-turbo
+uv run ./whisper.cpp/models/convert-h5-to-ggml.py ./whisper-large-v3-turbo/ ./whisper .
+uv run huggingface-cli upload --repo-type model whisper-large-v3-turbo-ivrit ./ggml-model.bin ./ggml-model.bin
 
-# Prepare OpenAI repository and whisper.cpp
-git clone https://github.com/openai/whisper --depth 1
-git clone https://github.com/ggerganov/whisper.cpp --depth 1
-
-# Prepare whisper-tiny for conversion
-git clone https://huggingface.co/openai/whisper-tiny --depth 1
-cd whisper-tiny
-git-lfs pull
-cd ..
-# Convert safetensors to GGML
-python3 ./whisper.cpp/models/convert-h5-to-ggml.py ./whisper-tiny/ ./whisper .
-mv ggml-model.bin ggml-tiny.bin
-
-# Optional: quantize model with Q8_0 method (int8)
-sudo apt install build-essential make 
+# Quantize
+sudo apt install cmake build-essential -y 
 cd whisper.cpp
-make -j quantize
+cmake -B build
+cmake --build build --config Release
 cd ..
-./whisper.cpp/quantize ggml-tiny.bin ggml-tiny.bin-q8_0.bin q8_0
-
-# Optional: upload to hugginface
-pip install -U "huggingface_hub[cli]"
-huggingface-cli login
-huggingface-cli upload thewh1teagle/ggml-tiny ./ggml-tiny.bin
+./whisper.cpp/build/bin/quantize ggml-model.bin ./ggml-model.int8.bin q8_0 # fp32/fp16/q8_0/q5_0
 ```
 
 </details>

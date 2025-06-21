@@ -12,6 +12,12 @@ import { message } from '@tauri-apps/plugin-dialog'
 
 type Direction = 'ltr' | 'rtl'
 
+export interface AdvancedTranscribeOptions {
+	includeSubFolders: boolean
+	skipIfExists: boolean
+	saveNextToAudioFile: boolean
+}
+
 // Define the type of preference
 export interface Preference {
 	displayLanguage: string
@@ -62,6 +68,9 @@ export interface Preference {
 	setYtDlpVersion: ModifyState<string | null>
 	shouldCheckYtDlpVersion: boolean
 	setShouldCheckYtDlpVersion: ModifyState<boolean>
+
+	advancedTranscribeOptions: AdvancedTranscribeOptions
+	setAdvancedTranscribeOptions: ModifyState<AdvancedTranscribeOptions>
 }
 
 // Create the context
@@ -87,6 +96,8 @@ export interface ModelOptions {
 	max_text_ctx?: number
 	word_timestamps?: boolean
 	max_sentence_len?: number
+	sampling_strategy: 'greedy' | 'beam search'
+	sampling_bestof_or_beam_size?: number
 }
 
 const systemIsDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -105,6 +116,8 @@ const defaultOptions = {
 		max_text_ctx: undefined,
 		word_timestamps: false,
 		max_sentence_len: 1,
+		sampling_strategy: 'beam search' as 'greedy' | 'beam search',
+		sampling_bestof_or_beam_size: 5,
 	},
 	ffmpegOptions: {
 		normalize_loudness: false,
@@ -149,6 +162,11 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	const [llmConfig, setLlmConfig] = useLocalStorage<LlmConfig>('prefs_llm_config', defaultOptions.llmConfig)
 	const [ytDlpVersion, setYtDlpVersion] = useLocalStorage<string | null>('prefs_ytdlp_version', null)
 	const [shouldCheckYtDlpVersion, setShouldCheckYtDlpVersion] = useLocalStorage<boolean>('prefs_should_check_ytdlp_version', true)
+	const [advancedTranscribeOptions, setAdvancedTranscribeOptions] = useLocalStorage<AdvancedTranscribeOptions>('prefs_advanced_transcribe_options', {
+		includeSubFolders: false,
+		saveNextToAudioFile: true,
+		skipIfExists: true,
+	})
 
 	useEffect(() => {
 		setIsFirstRun(false)
@@ -253,6 +271,8 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 		setYtDlpVersion,
 		shouldCheckYtDlpVersion,
 		setShouldCheckYtDlpVersion,
+		advancedTranscribeOptions,
+		setAdvancedTranscribeOptions,
 	}
 
 	return <PreferenceContext.Provider value={preference}>{children}</PreferenceContext.Provider>

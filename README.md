@@ -104,7 +104,7 @@ Medium [post](https://medium.com/@thewh1teagle/creating-vibe-multilingual-audio-
 
 # Issue report
 
-You can open [new issue](https://github.com/thewh1teagle/vibe/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=[Short+title]) and it's recommend to check [DEBUG.md](docs/DEBUG.md) first.
+You can open [new issue](https://github.com/thewh1teagle/vibe/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=[Short+title]) and it's recommend to check [debug.md](docs/debug.md) first.
 
 # Privacy Policy 🔒
 
@@ -120,6 +120,6 @@ Thanks for [github.com/whisper.cpp](https://github.com/ggerganov/whisper.cpp) fo
 
 Thanks for [openai.com](https://openai.com/) for their amazing [Whisper model](https://openai.com/research/whisper)
 
-Thanks for [github.com](https://github.com/) for their support in open source projects, providing infastructure completly free.
+Thanks for [github.com](https://github.com/) for their support in open source projects, providing infastructure completely free.
 
 And for all the amazing open source frameworks and libraries which this project uses...
