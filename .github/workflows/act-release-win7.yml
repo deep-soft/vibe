@@ -163,6 +163,7 @@ jobs:
                 # cargo update cargo_metadata@0.19.2 --precise 0.19.0 
                 cargo update -p cargo_metadata --precise 0.19.0
                 cargo update -p cargo-platform --precise 0.1.8
+                cargo update tauri-plugin-http@2.0.3 --precise  2.0.0-rc.6
 
             - name: Install frontend dependencies
               working-directory: ./desktop
