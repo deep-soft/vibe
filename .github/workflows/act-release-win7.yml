@@ -154,7 +154,9 @@ jobs:
               run: |
                 # cargo update
                 # cargo update jsonptr@0.4.7 --precise ver
-                echo "cargo update skip"
+                # echo "cargo update skip"
+                echo cargo update tauri-plugin-http@2.0.3 --precise ver
+                cargo update tauri-plugin-http@2.0.3 --precise ver
 
             - name: Install frontend dependencies
               working-directory: ./desktop
